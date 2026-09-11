@@ -1,0 +1,118 @@
+.container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.wrapper {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  transition:
+    border-color var(--transition-base),
+    background-color var(--transition-base);
+}
+
+.wrapper:hover {
+  border-color: var(--color-info);
+  background-color: var(--color-surface);
+}
+
+.wrapper.isInvalid {
+  border-color: var(--color-error);
+}
+
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fileInput {
+  display: none;
+}
+
+.hint {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  margin: 0;
+}
+
+.preview {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+}
+
+.image {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.removeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-error);
+  color: var(--color-text-inverse);
+  border: none;
+  cursor: pointer;
+  transition:
+    transform var(--transition-base),
+    background-color var(--transition-base);
+}
+
+.removeButton:hover {
+  transform: scale(1.1);
+  background-color: var(--color-error-light);
+}
+
+.removeButton:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+.changeRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: var(--font-size-xs);
+  margin: 0;
+}

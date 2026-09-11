@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { signOutAction } from '@/lib/server/actions/auth/signOut.action';
 import { auth } from '@/lib/server/auth/auth';
 import { env } from '@/lib/env';
+import { AdminNav } from './_components/AdminNav';
 import styles from './layout.module.css';
 
 export const instant = false;
@@ -37,6 +38,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </form>
         </div>
       </header>
+      <AdminNav />
       <main className={styles.main}>{children}</main>
     </div>
   );
