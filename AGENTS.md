@@ -6,15 +6,15 @@ Puerta de entrada para futuras sesiones. **Single source of truth para arquitect
 
 ## Estado actual
 
-| Fase | Estado | Notas |
-|---|---|---|
-| **0. Setup base** | ⏳ Pendiente | No se ha iniciado. Directorio contiene solo `.git`, `.atl`, `.gitignore`, `docs/`. |
-| 1. Auth admin | 🔒 Bloqueado | Depende de Fase 0 + `ADMIN_EMAILS` configurado |
-| 2. Categorías CRUD | 🔒 Bloqueado | |
-| 3. Productos CRUD + imagen + stock | 🔒 Bloqueado | |
-| 4. Vista cliente | 🔒 Bloqueado | Depende de `NEXT_PUBLIC_WHOTSAPP_NUMBER` |
-| 5. Cron job | 🔒 Bloqueado | Solo en deploy |
-| 6. Deploy | 🔒 Bloqueado | |
+| Fase                               | Estado       | Notas                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **0. Setup base**                  | ✅ Completa  | Scaffold Next.js 16.3.4 + Prisma 7 (driver adapter) + Biome + Zod env + theme tokens. DB local migrada con tablas Category/Product. `pnpm install`/`typecheck`/`lint`/`build`/`dev` pasan.                                                                                                                                                                                                                                    |
+| **1. Auth admin**                  | ✅ Completa  | NextAuth 5 beta + Google provider + whitelist en `authorized` callback + `/login` con mapa de errores + `/admin` placeholder con conteos DB + signIn/signOut actions + `proxy.ts` (ex middleware) con auth gate. Refactor: separación edge-safe `auth.config.ts` (Edge) vs `auth.ts` (Node) para que Prisma no se filtre al bundle del proxy. `instant = false` en `/admin` y `/login` para build verde con Cache Components. |
+| 2. Categorías CRUD                 | 🔒 Bloqueado |                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 3. Productos CRUD + imagen + stock | 🔒 Bloqueado |                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 4. Vista cliente                   | 🔒 Bloqueado | Depende de `NEXT_PUBLIC_WHATSAPP_NUMBER` (✅ corregido el typo WHOTSAPP→WHATSAPP)                                                                                                                                                                                                                                                                                                                                             |
+| 5. Cron job                        | 🔒 Bloqueado | Solo en deploy. `CRON_SECRET` opcional en env (Fase 5 lo agrega como requerido).                                                                                                                                                                                                                                                                                                                                              |
+| 6. Deploy                          | 🔒 Bloqueado |                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 **Leyenda:** ⏳ Pendiente · 🚧 En curso · ✅ Completa · 🔒 Bloqueada por dependencia
 
@@ -36,15 +36,15 @@ Puerta de entrada para futuras sesiones. **Single source of truth para arquitect
 
 App web **single-tenant** para el kiosco de Gustavo. Vista pública (catálogo + WhatsApp deep link) y panel admin (categorías + productos + stock). Diferencias explícitas con `carta-qr`:
 
-| | carta-qr | kioscoGustavo |
-|---|---|---|
-| Tenant | Multi-tenant, subdominios | **Single-tenant** |
-| Cache prefix | `venue:{venueId}:*` | **`kiosco:*`** |
-| Realtime | Soketi/Pusher | **No** (cache + `updateTag` + `revalidatePath`) |
-| Roles | admin, cajero, mozo, client | **Solo admin** (whitelist por email) |
-| Stock | No existe | **Sí**, columna simple con auto-cleanup vía cron |
-| Auth | NextAuth + roles | **NextAuth + whitelist hardcodeada** |
-| Borrado | Soft delete (`isActive`) | **Hard delete** vía cron cada 30 días |
+|              | carta-qr                    | kioscoGustavo                                    |
+| ------------ | --------------------------- | ------------------------------------------------ |
+| Tenant       | Multi-tenant, subdominios   | **Single-tenant**                                |
+| Cache prefix | `venue:{venueId}:*`         | **`kiosco:*`**                                   |
+| Realtime     | Soketi/Pusher               | **No** (cache + `updateTag` + `revalidatePath`)  |
+| Roles        | admin, cajero, mozo, client | **Solo admin** (whitelist por email)             |
+| Stock        | No existe                   | **Sí**, columna simple con auto-cleanup vía cron |
+| Auth         | NextAuth + roles            | **NextAuth + whitelist hardcodeada**             |
+| Borrado      | Soft delete (`isActive`)    | **Hard delete** vía cron cada 30 días            |
 
 ---
 
@@ -75,6 +75,7 @@ Estas decisiones son contrato. Si una sesión las quiere cambiar, **primero actu
 Lista detallada de qué se copia 1:1 vs qué se adapta: [PLANIFICACION.md §7](docs/PLANIFICACION.md#7-patrones-a-reusar-de-carta-qr-11-copiar-y-pegar).
 
 **Resumen ejecutivo:**
+
 - **Copiar literal:** `biome.json`, `createAction.ts`, layouts/form, layouts/Modals, UI/Button, UI/Icons, `lib/shared/types/image.ts`, `lib/server/uploadthing/cleanup.ts`, theme tokens.
 - **Adaptar:** `createProtectedAction` (sin venue), `resolveImageUpload` (sin venueId), `category.repository` (sin venueId, mantener validación 2 niveles), todos los modales (sin notion de venue).
 - **NO copiar:** `proxy.ts`, `app/[slug]/*`, todo lo de órdenes/pagos/combos/soketi, `verifyVenueAccess`, schema Prisma completo.

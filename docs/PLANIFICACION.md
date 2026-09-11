@@ -17,23 +17,23 @@ App web para el kiosco de Gustavo (diarios/revistas histórico, hoy centrado en 
 
 ## 2. Stack confirmado
 
-| Capa | Tecnología |
-|---|---|
-| Framework | Next.js 16.2+ (App Router, `cacheComponents` habilitado como en carta-qr) |
-| Lenguaje | TypeScript strict, `noEmit` |
-| DB | PostgreSQL vía Prisma 7 + `@prisma/adapter-pg` |
-| DB hosting | **Vercel + Neon** |
-| Auth | NextAuth 5 (beta) — provider único: **Google** |
-| Validación | Zod v3 |
-| Forms | react-hook-form + `@hookform/resolvers/zod` |
-| Toasts | react-hot-toast (vía Context Provider como carta-qr) |
-| Imágenes | UploadThing (lazy upload server-side con `utapi.uploadFiles`) |
-| Linter/Formatter | Biome |
-| Estilos | CSS Modules (sin Tailwind, sin styled-components) |
-| Realtime | **No se usa.** Sin Soketi/Pusher. Cache + `updateTag` + `revalidatePath` alcanza. |
-| Package manager | pnpm |
-| Hosting app | Vercel |
-| Dominio | A definir. Mientras tanto: `kiosco-gustavo.vercel.app` |
+| Capa             | Tecnología                                                                        |
+| ---------------- | --------------------------------------------------------------------------------- |
+| Framework        | Next.js 16.2+ (App Router, `cacheComponents` habilitado como en carta-qr)         |
+| Lenguaje         | TypeScript strict, `noEmit`                                                       |
+| DB               | PostgreSQL vía Prisma 7 + `@prisma/adapter-pg`                                    |
+| DB hosting       | **Vercel + Neon**                                                                 |
+| Auth             | NextAuth 5 (beta) — provider único: **Google**                                    |
+| Validación       | Zod v3                                                                            |
+| Forms            | react-hook-form + `@hookform/resolvers/zod`                                       |
+| Toasts           | react-hot-toast (vía Context Provider como carta-qr)                              |
+| Imágenes         | UploadThing (lazy upload server-side con `utapi.uploadFiles`)                     |
+| Linter/Formatter | Biome                                                                             |
+| Estilos          | CSS Modules (sin Tailwind, sin styled-components)                                 |
+| Realtime         | **No se usa.** Sin Soketi/Pusher. Cache + `updateTag` + `revalidatePath` alcanza. |
+| Package manager  | pnpm                                                                              |
+| Hosting app      | Vercel                                                                            |
+| Dominio          | A definir. Mientras tanto: `kiosco-gustavo.vercel.app`                            |
 
 ---
 
@@ -56,17 +56,16 @@ Modifica el callback `authorized` de NextAuth para que mire la whitelist cuando 
 authorized: async ({ auth, request }) => {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith("/admin")) {
     if (!auth?.user?.email) return false; // → redirect a /login
-    const allowed = env.ADMIN_EMAILS
-      .split(',')
+    const allowed = env.ADMIN_EMAILS.split(",")
       .map((e) => e.trim().toLowerCase())
       .filter(Boolean);
     return allowed.includes(auth.user.email.toLowerCase());
   }
 
   return true;
-}
+};
 ```
 
 `createProtectedAction` mantiene el patrón de carta-qr, pero la whitelist se chequea a nivel de middleware/callback de NextAuth, no dentro del wrapper (porque ya no hay roles ni `venueId`). El wrapper queda como **dead-code seguro**: si la ruta pasa el guard, el handler corre; si no, ni siquiera se invoca la action.
@@ -146,14 +145,15 @@ model Product {
 
 ### 4.3 Visibilidad de productos
 
-| Estado | Admin lo ve | Cliente lo ve | Botón WhatsApp |
-|---|---|---|---|
-| `isActive = true`, `stock > 0` | ✅ | ✅ | ✅ |
-| `isActive = true`, `stock = 0`, `< 30 días` | ✅ | ❌ (oculto) | ❌ |
-| `isActive = true`, `stock = 0`, `> 30 días` | ❌ (borrado por cron) | ❌ | ❌ |
-| `isActive = false` (pausado por Gustavo) | ✅ (badge "Pausado") | ❌ | ❌ |
+| Estado                                      | Admin lo ve           | Cliente lo ve | Botón WhatsApp |
+| ------------------------------------------- | --------------------- | ------------- | -------------- |
+| `isActive = true`, `stock > 0`              | ✅                    | ✅            | ✅             |
+| `isActive = true`, `stock = 0`, `< 30 días` | ✅                    | ❌ (oculto)   | ❌             |
+| `isActive = true`, `stock = 0`, `> 30 días` | ❌ (borrado por cron) | ❌            | ❌             |
+| `isActive = false` (pausado por Gustavo)    | ✅ (badge "Pausado")  | ❌            | ❌             |
 
 En el form de edición, el admin tiene dos switches separados:
+
 1. **Stock** (number input, +1 / -1 / directo).
 2. **Pausado** (`isActive`, switch). Default: activo.
 
@@ -164,8 +164,8 @@ En el form de edición, el admin tiene dos switches separados:
 Carta-qr usa `venue:{venueId}:{entity}`. Kiosco es single-tenant, así que el prefijo pasa a ser simplemente `kiosco:{entity}`:
 
 ```typescript
-cacheTag('kiosco:categories');
-cacheTag('kiosco:products');
+cacheTag("kiosco:categories");
+cacheTag("kiosco:products");
 ```
 
 Reglas (heredadas de carta-qr, adaptadas):
@@ -296,25 +296,25 @@ kioscoGustavo/
 
 Estos archivos se copian textuales desde carta-qr y se importan al kiosco sin reescribir:
 
-| Archivo / Carpeta de origen | Destino en kioscoGustavo | Notas |
-|---|---|---|
-| `lib/server/actions/createAction.ts` | `lib/server/actions/createAction.ts` | Idéntico |
+| Archivo / Carpeta de origen           | Destino en kioscoGustavo              | Notas                                                                                             |
+| ------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `lib/server/actions/createAction.ts`  | `lib/server/actions/createAction.ts`  | Idéntico                                                                                          |
 | `lib/server/createProtectedAction.ts` | `lib/server/createProtectedAction.ts` | **Adaptar:** quitar `getVenueId`, `allowedRoles`, `verifyVenueAccess`. Solo exige session válida. |
-| `components/Layouts/form/*` | `components/Layouts/form/*` | Idéntico |
-| `components/Layouts/Modals/*` | `components/Layouts/Modals/*` | Idéntico |
-| `components/UI/Icons/*` | `components/UI/Icons/*` | Idéntico |
-| `components/UI/Button/*` | `components/UI/Button/*` | Idéntico |
-| `lib/shared/types/image.ts` | `lib/shared/types/image.ts` | Idéntico |
-| `lib/shared/utils/uploadImage.ts` | `lib/shared/utils/uploadImage.ts` | **Adaptar:** quitar `venueId`, mantener `entityType: 'products' \| 'categories'` |
-| `lib/shared/constants/upload.ts` | `lib/shared/constants/upload.ts` | Idéntico |
-| `lib/server/uploadthing/cleanup.ts` | `lib/server/uploadthing/cleanup.ts` | Idéntico (cleanup es client-safe) |
-| `lib/server/uploadthing/config.ts` | `lib/server/uploadthing/config.ts` | Idéntico |
-| `app/themes/THEME_DESIGN.md` | `app/themes/THEME_DESIGN.md` | Idéntico |
-| `app/themes/tokens.css` | `app/themes/tokens.css` | Idéntico |
-| `biome.json` | `biome.json` | Idéntico |
-| `hooks/useReload.ts` (si existe) | `hooks/useReload.ts` | Idéntico |
-| `contexts/Providers/UIProvider.tsx` | `contexts/Providers/UIProvider.tsx` | Idéntico (toast + modal state) |
-| `next.config.ts` (config base) | `next.config.ts` | Idéntico (cacheComponents habilitado) |
+| `components/Layouts/form/*`           | `components/Layouts/form/*`           | Idéntico                                                                                          |
+| `components/Layouts/Modals/*`         | `components/Layouts/Modals/*`         | Idéntico                                                                                          |
+| `components/UI/Icons/*`               | `components/UI/Icons/*`               | Idéntico                                                                                          |
+| `components/UI/Button/*`              | `components/UI/Button/*`              | Idéntico                                                                                          |
+| `lib/shared/types/image.ts`           | `lib/shared/types/image.ts`           | Idéntico                                                                                          |
+| `lib/shared/utils/uploadImage.ts`     | `lib/shared/utils/uploadImage.ts`     | **Adaptar:** quitar `venueId`, mantener `entityType: 'products' \| 'categories'`                  |
+| `lib/shared/constants/upload.ts`      | `lib/shared/constants/upload.ts`      | Idéntico                                                                                          |
+| `lib/server/uploadthing/cleanup.ts`   | `lib/server/uploadthing/cleanup.ts`   | Idéntico (cleanup es client-safe)                                                                 |
+| `lib/server/uploadthing/config.ts`    | `lib/server/uploadthing/config.ts`    | Idéntico                                                                                          |
+| `app/themes/THEME_DESIGN.md`          | `app/themes/THEME_DESIGN.md`          | Idéntico                                                                                          |
+| `app/themes/tokens.css`               | `app/themes/tokens.css`               | Idéntico                                                                                          |
+| `biome.json`                          | `biome.json`                          | Idéntico                                                                                          |
+| `hooks/useReload.ts` (si existe)      | `hooks/useReload.ts`                  | Idéntico                                                                                          |
+| `contexts/Providers/UIProvider.tsx`   | `contexts/Providers/UIProvider.tsx`   | Idéntico (toast + modal state)                                                                    |
+| `next.config.ts` (config base)        | `next.config.ts`                      | Idéntico (cacheComponents habilitado)                                                             |
 
 ### 7.1 Archivos que NO se copian (no aplican)
 
@@ -332,12 +332,16 @@ Estos archivos se copian textuales desde carta-qr y se importan al kiosco sin re
 ### 8.1 Categorías (CRUD)
 
 **Schema** (single-tenant, 2 niveles):
+
 ```ts
 // category.schemas.ts
 export const categoryFormSchema = z.object({
-  name: z.string().trim().min(1, 'El nombre es requerido'),
+  name: z.string().trim().min(1, "El nombre es requerido"),
   description: optionalTrimmedString,
-  order: z.coerce.number().int().nonnegative('El orden debe ser mayor o igual a 0'),
+  order: z.coerce
+    .number()
+    .int()
+    .nonnegative("El orden debe ser mayor o igual a 0"),
   parentCategoryId: optionalParentCategoryId,
 });
 
@@ -347,41 +351,53 @@ export const createCategorySchema = z.object({
 ```
 
 **Repository** copia `category.repository.ts` de carta-qr, pero:
+
 - Quita `venueId` de inputs.
 - Mantiene `MAX_CATEGORY_LEVELS = 2`.
 - Mantiene validación de "no se puede borrar si tiene productos".
 - Mantiene "no se puede convertir en sub si ya tiene subs".
 
 **Use cases** copia patrón:
+
 ```ts
 export const categoryUseCases = {
   async getAll() {
-    'use cache: remote';
-    cacheLife('days');
-    cacheTag('kiosco:categories');
+    "use cache: remote";
+    cacheLife("days");
+    cacheTag("kiosco:categories");
     return categoryRepository(db).getAll();
   },
-  async getAllWithProductCount() { /* igual */ },
-  async createCategory(db, { data }) { return categoryRepository(db).create({ data }); },
-  async updateCategory(db, { id, data }) { /* ... */ },
-  async deleteCategory(db, { id }) { /* ... */ },
+  async getAllWithProductCount() {
+    /* igual */
+  },
+  async createCategory(db, { data }) {
+    return categoryRepository(db).create({ data });
+  },
+  async updateCategory(db, { id, data }) {
+    /* ... */
+  },
+  async deleteCategory(db, { id }) {
+    /* ... */
+  },
 };
 ```
 
 **Action** usa `createProtectedAction` (versión adaptada a kiosco):
+
 ```ts
-'use server';
+"use server";
 export const createCategory = createProtectedAction({
   schema: createCategorySchema,
   handler: async ({ data, db }) => {
     const cat = await categoryUseCases.createCategory(db, { data });
-    updateTag('kiosco:categories');
+    updateTag("kiosco:categories");
     return cat;
   },
 });
 ```
 
 **UI admin**:
+
 - Tabla con columnas: nombre, orden, parent (con breadcrumb), # productos, acciones.
 - Filtros: por parent (raíz/sub).
 - Botón "+ Nueva categoría" abre `AddCategoryModal` con `SectionForm` (Datos básicos + Parent).
@@ -391,25 +407,29 @@ export const createCategory = createProtectedAction({
 ### 8.2 Productos (CRUD + imagen + stock)
 
 **Schema** sigue patrón carta-qr (formSchema + payloadSchema para imagen):
+
 ```ts
 // product.schemas.ts
 const imageValueSchema = z.union([
-  z.literal(''),
+  z.literal(""),
   z.object({ url: z.string().url(), fileKey: z.string().min(1) }),
 ]);
 const imageValueFormSchema = z.union([
-  z.literal(''),
+  z.literal(""),
   z.object({ url: z.string().url(), fileKey: z.string().min(1) }),
   z.object({ file: z.instanceof(File) }),
 ]);
 
 export const productFormSchema = z.object({
-  name: z.string().trim().min(1, 'El nombre es requerido'),
+  name: z.string().trim().min(1, "El nombre es requerido"),
   description: z.string().optional(),
-  price: z.coerce.number().int().nonnegative('El precio debe ser mayor o igual a 0'),
+  price: z.coerce
+    .number()
+    .int()
+    .nonnegative("El precio debe ser mayor o igual a 0"),
   stock: z.coerce.number().int().nonnegative(),
   image: imageValueFormSchema.optional(),
-  categoryId: z.string().trim().min(1, 'La categoría es requerida'),
+  categoryId: z.string().trim().min(1, "La categoría es requerida"),
 });
 
 export const productPayloadSchema = z.object({
@@ -423,21 +443,25 @@ export const productPayloadSchema = z.object({
 ```
 
 **Repository** (`product.repository.ts`):
+
 - `getAll()`, `getById(id)`, `create`, `update`, `delete`, `setActive`.
 - `getActive()` filtra `isActive = true AND stock > 0` (lo que ve el cliente).
 - `getActiveByCategory(categoryId)`.
 - Sin `venueId` en inputs.
 
 **Use cases**:
+
 ```ts
 export const productUseCases = {
   async getAllActive() {
-    'use cache: remote';
-    cacheLife('hours');
-    cacheTag('kiosco:products');
+    "use cache: remote";
+    cacheLife("hours");
+    cacheTag("kiosco:products");
     return productRepository(db).getAllActive();
   },
-  async getAllActiveByCategory({ categoryId }) { /* ... */ },
+  async getAllActiveByCategory({ categoryId }) {
+    /* ... */
+  },
   async createProduct(db, { data }) {
     const product = await productRepository(db).create({ data });
     return product;
@@ -447,19 +471,28 @@ export const productUseCases = {
     const product = await productRepository(db).update({ id, data });
     // Si stock pasó de >0 a 0 → set stockZeroAt
     if (current && current.stock > 0 && product.stock === 0) {
-      await productRepository(db).setStockZeroAt({ id, stockZeroAt: new Date() });
+      await productRepository(db).setStockZeroAt({
+        id,
+        stockZeroAt: new Date(),
+      });
     }
     // Cleanup imagen si cambió
-    await cleanupUploadThingFileIfNeeded(current?.imageFileKey, data.imageFileKey);
+    await cleanupUploadThingFileIfNeeded(
+      current?.imageFileKey,
+      data.imageFileKey,
+    );
     return product;
   },
   async deleteProduct(db, { id }) {
     const product = await productRepository(db).getById({ id });
     const deleted = await productRepository(db).delete({ id });
-    if (product?.imageFileKey) await deleteUploadThingFile(product.imageFileKey);
+    if (product?.imageFileKey)
+      await deleteUploadThingFile(product.imageFileKey);
     return deleted;
   },
-  async setProductActive(db, { id, isActive }) { /* ... */ },
+  async setProductActive(db, { id, isActive }) {
+    /* ... */
+  },
   async decrementStock(db, { id, quantity }) {
     // Usado por acción rápida "Marcar como vendido" si se agrega en el futuro. Por ahora, no-op.
   },
@@ -467,6 +500,7 @@ export const productUseCases = {
 ```
 
 **UI admin**:
+
 - Tabla: imagen (thumbnail), nombre, categoría (con breadcrumb), precio, stock (con badge de color), estado (Activo/Pausado/Sin stock), acciones.
 - Filtros: por categoría, por estado (todos/activos/sin stock/pausados), búsqueda por nombre.
 - `AddProductModal`: `SectionForm` (Datos básicos: nombre, descripción, precio, stock, categoría), `SectionForm` (Imagen: `ImageForm` con entityType='products'), botón Guardar.
@@ -479,6 +513,7 @@ export const productUseCases = {
 **Ruta**: `/` (server component).
 
 **Layout mobile-first**:
+
 - Header sticky: logo del kiosco + nombre "Kiosco de Gustavo" (configurable por env).
 - Tabs/chips horizontales con scroll-snap: todas las categorías raíz. Sub-categorías anidadas o como tabs secundarias.
 - Grid de productos (2 columnas mobile, 3-4 desktop): imagen (con lazy loading), nombre, precio, badge de stock ("Última unidad" si stock=1, "Quedan N" si stock>1, oculto si stock=0).
@@ -487,10 +522,13 @@ export const productUseCases = {
 - Sin carrito. Sin login.
 
 **Mensaje WhatsApp** (decidido: solo nombre del producto):
+
 ```
 Hola Gustavo! Estoy interesado en: Funko Pop Spider-Man #142
 ```
+
 El helper vive en `lib/shared/utils/whatsapp.ts`:
+
 ```ts
 export function buildWhatsAppLink(phone: string, productName: string): string {
   const message = `Hola Gustavo! Estoy interesado en: ${productName}`;
@@ -501,6 +539,7 @@ export function buildWhatsAppLink(phone: string, productName: string): string {
 ### 8.4 Cron job de limpieza
 
 **Trigger**: Vercel Cron, configurado en `vercel.json`:
+
 ```json
 {
   "crons": [
@@ -511,9 +550,11 @@ export function buildWhatsAppLink(phone: string, productName: string): string {
   ]
 }
 ```
+
 > Cron en UTC. 03:00 ART (UTC-3) = 06:00 UTC. Ajustar si cambia el offset.
 
 **Endpoint**: `app/api/cron/cleanup-stock/route.ts`
+
 - Verifica header `Authorization: Bearer ${CRON_SECRET}` (Vercel lo manda automáticamente).
 - Si no coincide, 401.
 - Si coincide: busca productos con `stock = 0 AND stockZeroAt < (now - 30 days)`.
@@ -522,10 +563,13 @@ export function buildWhatsAppLink(phone: string, productName: string): string {
 - Retorna 200 con `{ deletedCount, ids }`.
 
 **Use case** (no es un action, es un script que vive en `lib/server/useCases/product.usecases.ts` o archivo aparte `lib/server/cron/cleanupStock.ts`):
+
 ```ts
 export async function cleanupOldZeroStockProducts() {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const candidates = await productRepository(db).findExpiredZeroStock({ before: cutoff });
+  const candidates = await productRepository(db).findExpiredZeroStock({
+    before: cutoff,
+  });
   let deletedCount = 0;
   for (const product of candidates) {
     await productRepository(db).delete({ id: product.id });
@@ -533,8 +577,8 @@ export async function cleanupOldZeroStockProducts() {
     deletedCount++;
   }
   // Invalidar cache para que la home se refresque
-  updateTag('kiosco:products');
-  return { deletedCount, ids: candidates.map(p => p.id) };
+  updateTag("kiosco:products");
+  return { deletedCount, ids: candidates.map((p) => p.id) };
 }
 ```
 
@@ -631,19 +675,19 @@ Plan tentativo. Cada fase termina con un entregable verificable (no necesariamen
 
 ```bash
 # === App ===
-NEXT_PUBLIC_APP_URL="https://kiosco-gustavo.vercel.app"
-NEXT_PUBLIC_APP_NAME="Kiosco de Gustavo"
-NEXT_PUBLIC_WHATSAPP_NUMBER="5491112345678"   # TODO: número real de Gustavo con código país
+NEXT_PUBLIC_APP_URL="http://localhost:3000"    # dev. Prod: https://kiosco-gustavo.vercel.app
+NEXT_PUBLIC_APP_NAME="Kiosco Lucas"           # nombre temporal, ver §11 — header + <title>
+NEXT_PUBLIC_WHATSAPP_NUMBER="542234360228"     # E.164 sin +. 54 (AR) + 223 (MDQ) + 4360228
 
 # === Auth ===
 AUTH_SECRET=                                    # openssl rand -base64 32
 AUTH_URL=                                       # Vercel completa
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-ADMIN_EMAILS="gustavo@gmail.com"               # TODO: emails reales
+ADMIN_EMAILS="lucasivancardozo27@gmail.com"    # whitelist Gustavo. Sumar CSV si hay backups.
 
 # === DB ===
-DATABASE_URL=                                   # connection string de Neon
+DATABASE_URL=                                   # dev: postgres local. Prod: connection string de Neon
 
 # === UploadThing ===
 UPLOADTHING_TOKEN=
@@ -657,14 +701,15 @@ CRON_SECRET=                                    # openssl rand -base64 32
 
 ## 11. Pendientes antes de implementación
 
-Estos datos se necesitan **antes** de empezar la Fase 1 (auth) o la Fase 6 (deploy):
+Estado actualizado al cierre de la sesión de planificación. Los resueltos quedan registrados para auditoría.
 
-- [ ] **Número de WhatsApp real de Gustavo** (formato E.164 sin `+`, ej: `5491145678901`).
-- [ ] **Emails concretos para whitelist** (mínimo el de Gustavo; opcionalmente 1-2 más para backup).
-- [ ] **Nombre comercial del kiosco** (para el header del cliente y `<title>`).
-- [ ] **Logo del kiosco** (opcional, formato PNG/SVG, idealmente cuadrado para favicon).
-- [ ] **OAuth consent screen en Google Cloud Console** (configurar pantalla de consentimiento con scope `openid email profile`, agregar dominio de Vercel como autorizado).
-- [ ] **Lista inicial de categorías** que Gustavo quiere cargar (puede ser en la sesión de implementación de Fase 2).
+- [x] **Número de WhatsApp real** — `542234360228` (E.164 sin `+`, AR + 223 + 4360228). Definido en sesión 2026-09-11.
+- [x] **Email whitelist admin** — `lucasivancardozo27@gmail.com` (único por ahora). Más adelante se puede sumar CSV de respaldos sin redeploy.
+- [x] **Nombre comercial** — `Kiosco Lucas` (temporal). Sustituir por el definitivo cuando se decida.
+- [ ] **Logo del kiosco** — pendiente. Mientras tanto el header público mostrará texto plano o avatar genérico (decidir en Fase 4).
+- [ ] **Google OAuth client + consent screen** — pendiente. Bloqueante para Fase 1. Crear client en Google Cloud Console con redirect URI `http://localhost:3000/api/auth/callback/google` (dev) y `https://kiosco-gustavo.vercel.app/api/auth/callback/google` (prod). Scopes: `openid email profile`.
+- [ ] **Lista inicial de categorías** — pendiente, se carga en sesión de Fase 2.
+- [ ] **Proyecto Neon** — pendiente. Se crea en Fase 6 (deploy). Hasta entonces, dev usa PostgreSQL local.
 
 ---
 
@@ -695,15 +740,15 @@ No es bloqueante para MVP, pero documentar la estrategia antes de Fase 6.
 
 ## 14. Riesgos identificados
 
-| Riesgo | Mitigación |
-|---|---|
+| Riesgo                                          | Mitigación                                                                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Gustavo olvida re-stockear antes de los 30 días | Notificación opcional (email/whatsapp) desde el cron cuando quedan 5 días para borrar. Diferido a Fase 5+. |
-| Subida de imágenes pesadas | Validar tamaño (4MB) client + server side vía `MAX_UPLOAD_SIZE`. Patrón carta-qr. |
-| Whitelist rota | `ADMIN_EMAILS` se loguea en arranque para confirmar formato. Documentado en `lib/env.ts`. |
-| Migración de DB en producción | Prisma migrations, nunca `db push` en prod. Branching de DB en Neon para PRs. |
-| Cache stale en home | `updateTag('kiosco:products')` en cada action. Si aún hay stale, `router.refresh()` en el cliente. |
-| OAuth sin verificar en Google | Documentar pasos en Fase 6. Verificar antes de Fase 1 con email real. |
-| Cron se cae | Vercel Cron tiene retry automático. Log de los runs. Si falla 3 veces, alert. Diferido. |
+| Subida de imágenes pesadas                      | Validar tamaño (4MB) client + server side vía `MAX_UPLOAD_SIZE`. Patrón carta-qr.                          |
+| Whitelist rota                                  | `ADMIN_EMAILS` se loguea en arranque para confirmar formato. Documentado en `lib/env.ts`.                  |
+| Migración de DB en producción                   | Prisma migrations, nunca `db push` en prod. Branching de DB en Neon para PRs.                              |
+| Cache stale en home                             | `updateTag('kiosco:products')` en cada action. Si aún hay stale, `router.refresh()` en el cliente.         |
+| OAuth sin verificar en Google                   | Documentar pasos en Fase 6. Verificar antes de Fase 1 con email real.                                      |
+| Cron se cae                                     | Vercel Cron tiene retry automático. Log de los runs. Si falla 3 veces, alert. Diferido.                    |
 
 ---
 
