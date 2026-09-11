@@ -24,7 +24,6 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   UPLOADTHING_TOKEN: z.string().optional(),
-  UPLOADTHING_APP_ID: z.string().optional(),
 
   CRON_SECRET: z.string().optional(),
 });
@@ -52,7 +51,6 @@ const fallback = {
   ADMIN_EMAILS: [],
   DATABASE_URL: '',
   UPLOADTHING_TOKEN: undefined,
-  UPLOADTHING_APP_ID: undefined,
   CRON_SECRET: undefined,
 } satisfies EnvShape;
 
