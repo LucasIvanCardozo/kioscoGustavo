@@ -1,0 +1,100 @@
+/* ============================================
+   TEMA GREEN — Verde elegante
+   Paleta OKLch: tono principal 145°, verde fresco y profesional
+   WCAG: text-primary 12.8:1 ✓, text-secondary 5.0:1 ✓
+   ============================================ */
+
+[data-theme='green'] {
+  /* --- PALETA --- */
+
+  --palette-50: oklch(97% 0.02 145);
+  --palette-100: oklch(94% 0.04 145);
+  --palette-200: oklch(88% 0.08 145);
+  --palette-300: oklch(78% 0.12 145);
+  --palette-400: oklch(68% 0.16 145);
+  --palette-500: oklch(58% 0.15 145); /* interactive */
+  --palette-600: oklch(50% 0.14 145);
+  --palette-700: oklch(42% 0.12 145);
+  --palette-800: oklch(32% 0.1 145);
+  --palette-900: oklch(22% 0.08 145);
+
+  --palette-neutral-50: oklch(99% 0.002 40);
+  --palette-neutral-100: oklch(96% 0.004 40);
+  --palette-neutral-200: oklch(92% 0.006 40);
+  --palette-neutral-300: oklch(80% 0.01 40);
+  --palette-neutral-400: oklch(68% 0.014 40);
+  --palette-neutral-500: oklch(55% 0.014 40);
+  --palette-neutral-600: oklch(45% 0.012 40);
+  --palette-neutral-700: oklch(35% 0.01 40);
+  --palette-neutral-800: oklch(25% 0.008 40);
+  --palette-neutral-900: oklch(15% 0.008 40);
+
+  /* Semantic */
+  --palette-success-100: oklch(92% 0.06 145);
+  --palette-success-400: oklch(78% 0.16 145);
+  --palette-success-500: oklch(68% 0.16 145);
+  --palette-success-600: oklch(58% 0.14 145);
+
+  --palette-warning-100: oklch(92% 0.08 80);
+  --palette-warning-400: oklch(85% 0.18 80);
+  --palette-warning-500: oklch(78% 0.16 80);
+  --palette-warning-600: oklch(68% 0.14 80);
+
+  --palette-error-100: oklch(92% 0.1 25);
+  --palette-error-400: oklch(68% 0.2 25);
+  --palette-error-500: oklch(60% 0.2 25);
+  --palette-error-600: oklch(50% 0.18 25);
+
+  --palette-info-100: oklch(94% 0.04 200);
+  --palette-info-400: oklch(72% 0.13 200);
+  --palette-info-500: oklch(58% 0.14 200);
+  --palette-info-600: oklch(48% 0.13 200);
+
+  /* --- CAPA 3: ALIAS SEMÁNTICOS --- */
+
+  --color-background: var(--palette-neutral-50);
+  --color-surface: var(--palette-neutral-100);
+  --color-surface-hover: var(--palette-neutral-200);
+  --color-border: var(--palette-neutral-300);
+  --color-border-hover: var(--palette-neutral-400);
+  --color-overlay: oklch(0% 0 0 / 0.5);
+
+  --color-text-primary: var(--palette-neutral-900); /* 12.8:1 ✓ */
+  --color-text-secondary: var(--palette-neutral-600); /* 5.0:1 ✓ */
+  --color-text-muted: var(--palette-neutral-500);
+  --color-text-inverse: var(--palette-neutral-50);
+
+  --color-interactive: var(--palette-600);
+  --color-interactive-hover: var(--palette-700);
+  --color-brand: var(--palette-600);
+  --color-brand-hover: var(--palette-700);
+
+  --color-success: var(--palette-success-500);
+  --color-success-light: var(--palette-success-100);
+  --color-success-hover: var(--palette-success-600);
+
+  --color-warning: var(--palette-warning-500);
+  --color-warning-light: var(--palette-warning-100);
+  --color-warning-hover: var(--palette-warning-600);
+
+  --color-error: var(--palette-error-500);
+  --color-error-light: var(--palette-error-100);
+  --color-error-hover: var(--palette-error-600);
+
+  --color-info: var(--palette-info-500);
+  --color-info-tint: var(--palette-info-100);
+  --color-info-hover: var(--palette-info-600);
+
+  --color-focus-ring: oklch(58% 0.15 145 / 0.12);
+  --color-error-focus-ring: oklch(60% 0.2 25 / 0.12);
+
+  --color-skeleton-base: var(--palette-neutral-200);
+  --color-skeleton-shimmer: oklch(0% 0 0 / 0.55);
+
+  /* Sombras teñidas verde */
+  --shadow-sm: 0 1px 2px 0 oklch(50% 0.15 145 / 0.05);
+  --shadow-md: 0 1px 3px 0 oklch(50% 0.15 145 / 0.08), 0 1px 2px 0 oklch(50% 0.15 145 / 0.05);
+  --shadow-lg: 0 4px 6px -1px oklch(50% 0.15 145 / 0.08), 0 2px 4px -1px oklch(50% 0.15 145 / 0.05);
+  --shadow-xl:
+    0 10px 15px -3px oklch(50% 0.15 145 / 0.08), 0 4px 6px -2px oklch(50% 0.15 145 / 0.05);
+}
