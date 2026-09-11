@@ -1,0 +1,126 @@
+// =============================================================================
+// Kiosco de Gustavo — Prisma schema
+// =============================================================================
+// Single-tenant, sin venueId. Category y Product son el dominio. User, Account,
+// Session y VerificationToken son los modelos requeridos por @auth/prisma-adapter
+// para que NextAuth pueda persistir usuarios OAuth de Google (Fase 1). El resto
+// de §4 del plan (reglas de visibilidad, stock=0 → oculto, cron 30 días, jerarquía
+// 2 niveles, onDelete: Restrict) está documentado abajo como referencia y se
+// aplica en repositorios/use cases de Fase 2 y Fase 3.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// VISIBILIDAD (referencia — no se implementa acá, se aplica en repos/usecases)
+// -----------------------------------------------------------------------------
+//   isActive=true,  stock > 0       → visible cliente, admin, botón WhatsApp
+//   isActive=true,  stock = 0       → solo admin (oculto al cliente)
+//   isActive=true,  stock = 0, >30d → borrado por cron
+//   isActive=false                  → solo admin, badge "Pausado"
+//
+// REGLAS DE NEGOCIO (referencia — implementación en Fase 2/3/5)
+// -----------------------------------------------------------------------------
+//   * Stock = 0 oculta el producto al cliente de inmediato (30 días para
+//     reactivarlo antes de que el cron lo borre).
+//   * Cron diario 03:00 ART borra productos con stock = 0 AND
+//     stockZeroAt < (now - 30 days), junto con su imagen en UploadThing.
+//   * Categorías: máximo 2 niveles (raíz + subcategoría). No se permite
+//     convertir una categoría en sub si ya tiene subcategorías propias.
+//   * onDelete: Restrict en product.categoryId — no se puede borrar una
+//     categoría que tenga productos asociados.
+//   * price es Int en pesos ARS enteros (consistencia con carta-qr).
+//   * image + imageFileKey siguen el patrón lazy upload de carta-qr.
+// -----------------------------------------------------------------------------
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  order       Int        @default(0)
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([parentId, order])
+}
+
+model Product {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  price        Int
+  stock        Int       @default(0)
+  image        String?
+  imageFileKey String?
+  categoryId   String
+  category     Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  isActive     Boolean   @default(true)
+  stockZeroAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive, stock])
+  @@index([stockZeroAt])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
