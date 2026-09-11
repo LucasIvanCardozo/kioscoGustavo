@@ -690,8 +690,8 @@ ADMIN_EMAILS="lucasivancardozo27@gmail.com"    # whitelist Gustavo. Sumar CSV si
 DATABASE_URL=                                   # dev: postgres local. Prod: connection string de Neon
 
 # === UploadThing ===
+# Solo UPLOADTHING_TOKEN (v7). Requerido solo cuando se sube la primera imagen.
 UPLOADTHING_TOKEN=
-UPLOADTHING_APP_ID=
 
 # === Cron ===
 CRON_SECRET=                                    # openssl rand -base64 32
