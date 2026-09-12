@@ -244,4 +244,27 @@ export const productUseCases = {
     }
     return productRepository(db).setActive({ id, isActive: !existing.isActive });
   },
+
+  async cleanupOldZeroStockProducts(db: PrismaClient | Prisma.TransactionClient) {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { productRepository } = await import('@/lib/server/db/repository/product.repository');
+
+    const candidates = await productRepository(db).findExpiredZeroStock({ before: cutoff });
+
+    const ids: string[] = [];
+    for (const product of candidates) {
+      try {
+        if (product.imageFileKey) {
+          const { deleteUploadThingFile } = await import('@/lib/server/uploadthing/cleanup');
+          await deleteUploadThingFile(product.imageFileKey);
+        }
+        await db.product.delete({ where: { id: product.id } });
+        ids.push(product.id);
+      } catch (error) {
+        console.error(`[cleanupStock] Error deleting product ${product.id}:`, error);
+      }
+    }
+
+    return { deletedCount: ids.length, ids };
+  },
 };

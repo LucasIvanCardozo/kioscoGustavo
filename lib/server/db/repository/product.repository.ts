@@ -26,13 +26,7 @@ const PRODUCT_INCLUDE = {
 } satisfies Prisma.ProductInclude;
 
 export const productRepository = (db: PrismaClient | Prisma.TransactionClient) => ({
-  getAll({
-    categoryId,
-    isActive,
-  }: {
-    categoryId?: string;
-    isActive?: boolean;
-  } = {}) {
+  getAll({ categoryId, isActive }: { categoryId?: string; isActive?: boolean } = {}) {
     return db.product.findMany({
       where: {
         ...(categoryId ? { categoryId } : {}),
@@ -117,6 +111,20 @@ export const productRepository = (db: PrismaClient | Prisma.TransactionClient) =
     return db.product.update({
       where: { id },
       data: { stock, stockZeroAt },
+    });
+  },
+
+  findExpiredZeroStock({ before }: { before: Date }) {
+    return db.product.findMany({
+      where: {
+        stock: 0,
+        stockZeroAt: { not: null, lt: before },
+      },
+      select: {
+        id: true,
+        name: true,
+        imageFileKey: true,
+      },
     });
   },
 });
