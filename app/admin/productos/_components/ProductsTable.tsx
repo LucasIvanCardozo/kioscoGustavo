@@ -1,10 +1,18 @@
 'use client';
 
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
+  useReactTable,
+} from '@tanstack/react-table';
 import { faEdit, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import Image from 'next/image';
 import { useMemo, useOptimistic, useState, useTransition } from 'react';
 import toast from 'react-hot-toast';
-import Image from 'next/image';
 import { Button } from '@/components/UI/Button';
 import type { ProductWithCategory } from '@/lib/shared/types/product.types';
 import {
@@ -49,6 +57,7 @@ export const ProductsTable = ({ products, categories }: Props) => {
   const [modal, setModal] = useState<ModalState>({ kind: 'closed' });
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [, startTransition] = useTransition();
 
   const close = () => setModal({ kind: 'closed' });
@@ -94,49 +103,66 @@ export const ProductsTable = ({ products, categories }: Props) => {
     );
   });
 
-  const renderRows = () => {
-    if (optimisticProducts.length === 0) {
-      return (
-        <tr>
-          <td colSpan={7} className={styles.empty}>
-            No hay productos que coincidan con los filtros.
-          </td>
-        </tr>
-      );
-    }
-
-    return optimisticProducts.map((product) => {
-      const variant = stockVariant(product.stock);
-      const stockLabel = product.stock === 0 ? 'Sin stock' : `${product.stock} u.`;
-
-      return (
-        <tr key={product.id} className={styles.row}>
-          <td>
-            <div className={styles.thumbnailCell}>
-              {product.image ? (
-                <Image
-                  src={product.image}
-                  alt={product.name}
-                  width={40}
-                  height={40}
-                  className={styles.thumbnail}
-                />
-              ) : (
-                <div className={styles.thumbnailPlaceholder}>
-                  <span aria-hidden="true">—</span>
-                </div>
-              )}
-            </div>
-          </td>
-          <td className={styles.nameCell}>
-            <span className={styles.name}>{product.name}</span>
-            {product.description && (
-              <span className={styles.description}>{product.description}</span>
+  const columns = useMemo<ColumnDef<ProductWithCategory>[]>(
+    () => [
+      {
+        id: 'image',
+        header: '',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className={styles.thumbnailCell}>
+            {row.original.image ? (
+              <Image
+                src={row.original.image}
+                alt={row.original.name}
+                width={40}
+                height={40}
+                className={styles.thumbnail}
+              />
+            ) : (
+              <div className={styles.thumbnailPlaceholder}>
+                <span aria-hidden="true">—</span>
+              </div>
             )}
-          </td>
-          <td className={styles.mutedCell}>{product.category.name}</td>
-          <td className={styles.priceCell}>{formatPrice(product.price)}</td>
-          <td>
+          </div>
+        ),
+      },
+      {
+        id: 'name',
+        accessorFn: (row) => row.name,
+        header: 'Nombre',
+        cell: ({ row }) => (
+          <div className={styles.nameCell}>
+            <span className={styles.name}>{row.original.name}</span>
+            {row.original.description && (
+              <span className={styles.description}>{row.original.description}</span>
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'category',
+        accessorFn: (row) => row.category.name,
+        header: 'Categoría',
+        cell: ({ row }) => <span className={styles.mutedCell}>{row.original.category.name}</span>,
+      },
+      {
+        id: 'price',
+        accessorKey: 'price',
+        header: 'Precio',
+        cell: ({ getValue }) => (
+          <span className={styles.priceCell}>{formatPrice(getValue<number>())}</span>
+        ),
+      },
+      {
+        id: 'stock',
+        accessorKey: 'stock',
+        header: 'Stock',
+        cell: ({ row }) => {
+          const product = row.original;
+          const variant = stockVariant(product.stock);
+          const stockLabel = product.stock === 0 ? 'Sin stock' : `${product.stock} u.`;
+          return (
             <div className={styles.stockCell}>
               <span className={`${styles.stockBadge} ${styles[`stock-${variant}`]}`}>
                 {stockLabel}
@@ -180,8 +206,16 @@ export const ProductsTable = ({ products, categories }: Props) => {
                 </button>
               </div>
             </div>
-          </td>
-          <td>
+          );
+        },
+      },
+      {
+        id: 'isActive',
+        accessorFn: (row) => (row.isActive ? 1 : 0),
+        header: 'Estado',
+        cell: ({ row }) => {
+          const product = row.original;
+          return (
             <label className={styles.statusToggle}>
               <input
                 type="checkbox"
@@ -206,14 +240,21 @@ export const ProductsTable = ({ products, categories }: Props) => {
                 {product.isActive ? 'Activo' : 'Pausado'}
               </span>
             </label>
-          </td>
-          <td className={styles.actionsCell}>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className={styles.actionsCell}>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setModal({ kind: 'edit', product })}
-              aria-label={`Editar ${product.name}`}
+              onClick={() => setModal({ kind: 'edit', product: row.original })}
+              aria-label={`Editar ${row.original.name}`}
             >
               <FontAwesomeIcon icon={faEdit} />
             </Button>
@@ -221,16 +262,26 @@ export const ProductsTable = ({ products, categories }: Props) => {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setModal({ kind: 'delete', product })}
-              aria-label={`Eliminar ${product.name}`}
+              onClick={() => setModal({ kind: 'delete', product: row.original })}
+              aria-label={`Eliminar ${row.original.name}`}
             >
               <FontAwesomeIcon icon={faTrash} />
             </Button>
-          </td>
-        </tr>
-      );
-    });
-  };
+          </div>
+        ),
+      },
+    ],
+    [applyOptimistic],
+  );
+
+  const table = useReactTable({
+    data: optimisticProducts,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   const categoryFilterOptions = [
     { option: 'Todas las categorías', value: '' },
@@ -291,17 +342,47 @@ export const ProductsTable = ({ products, categories }: Props) => {
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
-            <tr>
-              <th aria-label="Imagen" />
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Estado</th>
-              <th aria-label="Acciones" />
-            </tr>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort();
+                  const sorted = header.column.getIsSorted();
+                  const sortAttr =
+                    sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+                  return (
+                    <th
+                      key={header.id}
+                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      className={canSort ? styles.sortable : undefined}
+                      aria-sort={canSort ? sortAttr : undefined}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {canSort && <SortIcon sorted={sorted} />}
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
-          <tbody>{renderRows()}</tbody>
+          <tbody>
+            {table.getRowModel().rows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className={styles.empty}>
+                  No hay productos que coincidan con los filtros.
+                </td>
+              </tr>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className={styles.row}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
         </table>
       </div>
 
@@ -320,4 +401,10 @@ export const ProductsTable = ({ products, categories }: Props) => {
       )}
     </>
   );
+};
+
+const SortIcon = ({ sorted }: { sorted: false | 'asc' | 'desc' }) => {
+  if (sorted === 'asc') return <span aria-hidden="true">↑</span>;
+  if (sorted === 'desc') return <span aria-hidden="true">↓</span>;
+  return <span aria-hidden="true">↕</span>;
 };
