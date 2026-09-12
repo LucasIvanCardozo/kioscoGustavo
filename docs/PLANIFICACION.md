@@ -657,17 +657,19 @@ Plan tentativo. Cada fase termina con un entregable verificable (no necesariamen
 
 ### Fase 6 — Deploy
 
-- [ ] Crear proyecto Neon, obtener `DATABASE_URL`.
-- [ ] Crear proyecto Vercel, conectar repo.
-- [ ] Configurar env vars en Vercel.
-- [ ] Configurar Google OAuth con redirect URI de producción.
-- [ ] Primer deploy, smoke test en `*.vercel.app`.
+- [x] Crear proyecto Neon, obtener `DATABASE_URL`.
+- [x] Crear proyecto Vercel, conectar repo.
+- [x] Configurar env vars en Vercel.
+- [x] Configurar Google OAuth con redirect URI de producción.
+- [x] Primer deploy, smoke test en `*.vercel.app`.
 - [ ] Comprar dominio `.com.ar` (cuando se decida).
 - [ ] Configurar DNS.
-- [ ] Configurar cron en producción.
-- [ ] Smoke test final con Gustavo.
+- [x] Configurar cron en producción (deployado con `vercel.json`).
+- [x] Smoke test final con Gustavo.
 
 **Entregable:** App en producción accesible públicamente.
+
+**Estado actual:** Deploy vivo en `https://kiosco-gustavo-three.vercel.app/`. Sesión de implementación cerrada el 2026-09-12 con smoke test E2E exitoso (home, login, admin CRUD, upload imagen, WhatsApp CTA, rechazo por whitelist, cron auth).
 
 ---
 

@@ -1,164 +1,175 @@
 # AGENTS.md — Kiosco de Gustavo
 
-Puerta de entrada para futuras sesiones. **Single source of truth para arquitectura, modelo de datos, fases y decisiones:** [`docs/PLANIFICACION.md`](docs/PLANIFICACION.md). Este archivo es solo la versión resumida y el índice rápido.
-
----
-
-## Estado actual
-
-| Fase                                   | Estado      | Notas                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **0. Setup base**                      | ✅ Completa | Scaffold Next.js 16.3.4 + Prisma 7 (driver adapter) + Biome + Zod env + theme tokens. DB local migrada con tablas Category/Product. `pnpm install`/`typecheck`/`lint`/`build`/`dev` pasan.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| **1. Auth admin**                      | ✅ Completa | NextAuth 5 beta + Google provider + whitelist en `authorized` callback + `/login` con mapa de errores + `/admin` placeholder con conteos DB + signIn/signOut actions + `proxy.ts` (ex middleware) con auth gate. Refactor: separación edge-safe `auth.config.ts` (Edge) vs `auth.ts` (Node) para que Prisma no se filtre al bundle del proxy. `instant = false` en `/admin` y `/login` para build verde con Cache Components.                                                                                                                                                                                                                  |
-| **2. Categorías CRUD**                 | ✅ Completa | Entity files (schemas, types, repository, usecases con 4 reglas de negocio) + actions create/update/delete con `updateTag('kiosco:categories')` + página admin con tabla + modales (Add/Edit/Delete). Validaciones: jerarquía 2 niveles, no self-parent, no sub con subcategorías, no borrar con productos/sub. `useProtectedAction` adaptado single-tenant (sin venueId/allowedRoles).                                                                                                                                                                                                                                                        |
-| **3. Productos CRUD + imagen + stock** | ✅ Completa | Entity files (schemas, types, repository, usecases con 6 reglas) + 6 actions (create/update/delete/incrementStock/decrementStock/toggleProductActive) con `updateTag('kiosco:products')`. UploadThing lazy upload server-side (UTApi + utapi + cleanup + compensateOrphanedUpload), `ImageForm` con preview de 3 estados. UI admin con tabla (thumbnail, categoría, precio, stock badge, Switch isActive), filtros (categoría + estado), modales (Add/Edit/Delete), optimistic update de stock con `useOptimistic`. Nav admin (Categorías/Productos). `next.config.ts images.remotePatterns` para hosts UT (utfs.io, ufs.sh).                  |
-| **4. Vista cliente**                   | ✅ Completa | Home `/` pública (server component con `'use cache'` + `cacheTag('kiosco:products'/'kiosco:categories')`) + Header sticky con nombre del kiosco + CategoryTabs scroll-snap con `?category=<id>` search params + grid responsive de `ProductCard` (imagen, nombre, precio ARS formateado, badge stock condicional, CTA WhatsApp). Visibilidad: solo `isActive=true AND stock>0`. Helper `buildWhatsAppLink(phone, productName, ownerName='Gustavo')` → `wa.me/<phone>?text=…`. Saludo: `Hola Gustavo! Estoy interesado en: <nombre>`. Patrón `loadCatalog()` separado de `Page()` para combinar `instant=false` + searchParams + `'use cache'`. |
-| **5. Cron job**                        | ✅ Completa | `vercel.json` con cron diario 03:00 ART (`0 6 * * *` UTC) → `/api/cron/cleanup-stock`. Endpoint con auth `Authorization: Bearer <CRON_SECRET>` (500 si no configurado, 401 si falta, 200 con `{ deletedCount, ids, durationMs }`). Use case `cleanupOldZeroStockProducts` itera candidatos (stock=0 + stockZeroAt < now - 30d), borra imagen de UploadThing best-effort primero y luego la fila. Repository `findExpiredZeroStock` con select mínimo (`id, name, imageFileKey`). `export const instant = false` en el route handler (Cache Components rechaza `dynamic`/`runtime` en route handlers).                                          |
-| **6. Deploy**                          | ✅ Completa | Proyecto deployado en Vercel + Neon. URL actual: `https://kiosco-gustavo-three.vercel.app/`. `prisma migrate deploy` corre antes de `next build` en Vercel. Env vars configuradas en el dashboard. Smoke test E2E completo ejecutado con éxito (home, login, admin CRUD, upload imagen, WhatsApp CTA, rechazo por whitelist, cron auth). Pendiente menor: promover a production limpio (sin sufijo `-three`) y dominio `.com.ar` cuando se decida.                                                                                                                                                                                             |
-
-**Leyenda:** ⏳ Pendiente · 🚧 En curso · ✅ Completa · 🔒 Bloqueada por dependencia
-
-**Actualizar esta tabla en cada sesión** según se avanza. Detalle completo de cada fase en [PLANIFICACION.md §9](docs/PLANIFICACION.md#9-fases-de-implementacion).
-
----
+Entry point for agent sessions. Detailed architecture, decisions, and original plan live in [docs/PLANIFICACION.md](docs/PLANIFICACION.md). **Keep this file under ~150 lines**; extract detail to `docs/` if it grows.
 
 ## Priority
 
-1. Instrucciones explícitas del usuario > este archivo > convenciones del repo.
-2. Si hay ambigüedad, releer [PLANIFICACION.md](docs/PLANIFICACION.md) antes de inventar.
-3. **No inventar arquitectura/abstracciones** que no estén justificadas por el plan.
-4. **Consistencia de patrón.** Si se introduce algo nuevo, auditar uso existente en `carta-qr/` y alinearse; no hacer one-offs.
-5. **Decisión nueva → primero PLANIFICACION.md, código después.** Si una decisión cambia el plan, actualizar el doc antes de commitear.
-
----
+1. User instructions override this file.
+2. This file overrides repo conventions.
+3. Ambiguous → inspect existing patterns first (and check `../carta-qr/` for the reference implementation).
+4. Do not invent architecture/abstractions unless the task requires it.
+5. **Pattern consistency.** Pick one way to do something and apply it across the app. When introducing a new component or pattern, audit `../carta-qr/` and align; no one-offs. Same rule in JSX, CSS, commit style, or API design.
 
 ## Project
 
-App web **single-tenant** para el kiosco de Gustavo. Vista pública (catálogo + WhatsApp deep link) y panel admin (categorías + productos + stock). Diferencias explícitas con `carta-qr`:
+Single-tenant web app for the gustavo's kiosk (figures and collectibles, plus whatever comes next). Public catalog + WhatsApp deep-link to `Hello Gustavo!` admin panel for categories, products, and stock.
 
-|              | carta-qr                    | kioscoGustavo                                    |
-| ------------ | --------------------------- | ------------------------------------------------ |
-| Tenant       | Multi-tenant, subdominios   | **Single-tenant**                                |
-| Cache prefix | `venue:{venueId}:*`         | **`kiosco:*`**                                   |
-| Realtime     | Soketi/Pusher               | **No** (cache + `updateTag` + `revalidatePath`)  |
-| Roles        | admin, cajero, mozo, client | **Solo admin** (whitelist por email)             |
-| Stock        | No existe                   | **Sí**, columna simple con auto-cleanup vía cron |
-| Auth         | NextAuth + roles            | **NextAuth + whitelist hardcodeada**             |
-| Borrado      | Soft delete (`isActive`)    | **Hard delete** vía cron cada 30 días            |
+- **Owner:** Gustavo (kiosk owner). **Dev/admin:** Lucas.
+- **Production:** `https://kiosco-gustavo-three.vercel.app/` (Vercel + Neon PostgreSQL).
+- **Single-tenant:** no `venueId`, no roles, no subdomains, no Soketi/realtime. All updates via cache + `updateTag`.
+- **Reference implementation:** `../carta-qr/` (multi-tenant sibling). Many UI primitives and patterns are adapted from there.
 
----
+## Stack
 
-## Stack (resumen)
-
-Next.js 16.2+ App Router · TypeScript strict · Prisma 7 + PostgreSQL (Neon) · NextAuth 5 beta (Google) · Zod v3 · react-hook-form · react-hot-toast · UploadThing · Biome · CSS Modules · pnpm · Vercel.
-
-Versiones y detalle completo: [PLANIFICACION.md §2](docs/PLANIFICACION.md#2-stack-confirmado).
-
----
-
-## Decisiones críticas a NO romper
-
-Estas decisiones son contrato. Si una sesión las quiere cambiar, **primero actualizar PLANIFICACION.md**, después implementar.
-
-1. **NO realtime.** No agregar Soketi, Pusher, ni websockets. Toda actualización es vía cache + `updateTag`.
-2. **Cache prefix siempre `kiosco:`.** Nunca `venue:`, nunca suelto, nunca por id.
-3. **`createProtectedAction` SIN venueId.** Versión adaptada (sin `getVenueId`, sin `verifyVenueAccess`, sin `allowedRoles`). Solo chequea session válida.
-4. **Whitelist en `authorized` callback de NextAuth**, NO en actions. Configurada vía `ADMIN_EMAILS` (CSV).
-5. **Stock = 0 → oculto al cliente inmediatamente.** Hard delete solo vía cron después de 30 días. NO soft delete con `isActive` (eso es carta-qr).
-6. **Lazy upload de imágenes** vía `utapi.uploadFiles` server-side. NO upload temprano con `<UploadButton>`.
-7. **Mensaje WhatsApp es solo nombre del producto.** No cambiar formato sin consultar.
-
----
-
-## Patrones heredados de carta-qr
-
-Lista detallada de qué se copia 1:1 vs qué se adapta: [PLANIFICACION.md §7](docs/PLANIFICACION.md#7-patrones-a-reusar-de-carta-qr-11-copiar-y-pegar).
-
-**Resumen ejecutivo:**
-
-- **Copiar literal:** `biome.json`, `createAction.ts`, layouts/form, layouts/Modals, UI/Button, UI/Icons, `lib/shared/types/image.ts`, `lib/server/uploadthing/cleanup.ts`, theme tokens.
-- **Adaptar:** `createProtectedAction` (sin venue), `resolveImageUpload` (sin venueId), `category.repository` (sin venueId, mantener validación 2 niveles), todos los modales (sin notion de venue).
-- **NO copiar:** `proxy.ts`, `app/[slug]/*`, todo lo de órdenes/pagos/combos/soketi, `verifyVenueAccess`, schema Prisma completo.
-
-Referencia externa: `../carta-qr/` (hermano en el filesystem). Sus docs viven en `../carta-qr/docs/`.
-
----
+- **Framework:** Next.js 16.3+ App Router (`cacheComponents: true`)
+- **Language:** TypeScript strict, `noEmit`
+- **Database:** PostgreSQL via Prisma 7 with `@prisma/adapter-pg` (driver adapter, no `url` in `datasource`; URL goes in `prisma.config.ts`)
+- **Auth:** NextAuth 5 beta (Google provider, JWT session, whitelist via `ADMIN_EMAILS`)
+- **Validation:** Zod v3
+- **Forms:** react-hook-form + `@hookform/resolvers/zod`
+- **Styling:** CSS Modules exclusively (no Tailwind, no styled-components)
+- **Media:** UploadThing v7 (server-side `utapi.uploadFiles`, only `UPLOADTHING_TOKEN` env var)
+- **Linter/Formatter:** Biome
+- **Package Manager:** pnpm
+- **Hosting:** Vercel
 
 ## Commands
 
-Aún no instalado. Cuando arranquemos Fase 0, los comandos serán:
-
 ```bash
-pnpm install              # instalar deps
-pnpm dev                  # dev server
-pnpm build                # build prod
+pnpm install              # install deps
+pnpm dev                  # dev server (uses .env via dotenv-cli in scripts)
+pnpm build                # production build (runs prisma migrate deploy first)
+pnpm start                # production server
 pnpm typecheck            # tsc --noEmit
-pnpm lint                 # biome
+pnpm lint                 # biome lint
 pnpm format               # biome format --write
-pnpm test                 # vitest (cuando esté)
-pnpm test:e2e             # playwright (cuando esté)
-pnpm db:migrate           # prisma migrate dev
+pnpm db:migrate           # prisma migrate dev against .env
+pnpm db:deploy            # prisma migrate deploy against .env
 pnpm db:studio            # prisma studio
+pnpm cron:trigger         # local cron smoke test (replace BEARER with CRON_SECRET)
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/cleanup-stock
 ```
 
----
+## Architecture
 
-## Convenciones
+```
+app/                      → routes (cacheComponents opt-out via 'use cache' + instant=false)
+  page.tsx                → public catalog (loadCatalog() helper + Page with searchParams)
+  login/, admin/          → auth + admin shell (inherits instant=false)
+  api/cron/cleanup-stock/ → cron endpoint (Bearer CRON_SECRET)
+components/
+  Features/Client/        → public home (Header, CategoryTabs, ProductCard, HomePage)
+  Layouts/                → Header (public) + form/ + Modals/ from carta-qr
+  UI/                     → Button, ModalActions, Loading, Switch, ImageForm, Icons
+  Providers/              → ToastProvider, AuthRejectionToast
+lib/
+  server/auth/            → auth.config.ts (edge-safe) + auth.ts (Node + PrismaAdapter)
+  server/db/db.ts         → Prisma 7 singleton with PrismaPg adapter
+  server/db/repository/   → category, product Prisma access
+  server/useCases/        → business logic + cache invalidation
+  server/actions/         → createProtectedAction wrappers (no venueId, no alloweRoles)
+  server/uploadthing/     → utapi proxy + cleanup + compensateOrphanedUpload
+  shared/schemas/         → Zod (category, product)
+  shared/types/           → Prisma-derived types (CategoryWithCount, ProductWithRelations)
+  shared/utils/           → whatsapp.ts (buildWhatsAppLink), uploadImage.ts
+  shared/constants/upload.ts → MAX_UPLOAD_SIZE
+proxy.ts                  → Edge middleware (NextAuth auth gate via auth.config.ts)
+prisma/                   → schema.prisma + migrations
+prisma.config.ts          → datasource url for migrate CLI
+vercel.json               → cron schedule
+next.config.ts            → cacheComponents + agentRules + images.remotePatterns (UT)
+```
 
-- **Código en inglés.** UI y mensajes de error en **español rioplatense**.
-- **Sin comments** salvo que el usuario lo pida explícitamente. Self-documenting code.
-- **Imports:** `@/*` alias; external → `@/` → relative. `import type` solo top-level.
-- **Biome:** semicolons, single quotes, trailing commas, `lineWidth: 100`, 2-space indent. CSS excluido.
-- **No unused bindings** (prefijo `_`).
-- **Errores en actions:** `ActionResult<T>` con `{ success, data, error }`. Zod format `path 🡆 message`.
-- **Commits:** conventional con scope. Ej: `feat(admin): add product CRUD`, `fix(cron): handle empty candidates`. Subject ≤100 chars, imperativo.
+## Patterns
 
----
+### Entity files (5-file domain convention)
+- `lib/shared/schemas/<entity>.schemas.ts` — Zod (payload, form, create, update, delete).
+- `lib/shared/types/<entity>.types.ts` — Prisma-derived types via `Prisma.<Entity>GetPayload<{ include: typeof INCLUDE }>`.
+- `lib/server/db/repository/<entity>.repository.ts` — pure Prisma access, factory `repository(db)`.
+- `lib/server/useCases/<entity>.usecases.ts` — business rules + cache invalidation.
+- `lib/server/actions/<entity>.action.ts` — `createProtectedAction` wrappers + `updateTag('kiosco:<entity>')`.
 
-## Protocolo de sesión
+### `createProtectedAction` (single-tenant)
+Wraps `createAction` + `auth()`. ActionContext = `{ data, session, db }`. **No** `getVenueId`, no `allowedRoles`, no `verifyVenueAccess`. Whitelist lives in `proxy.ts` via `authCallbacks.authorized` — never duplicated in actions.
 
-**Al iniciar una sesión:**
+### Cache (Cache Components / Next 16)
+- `'use cache'` + `cacheTag('kiosco:<entity>')` for reads.
+- `updateTag('kiosco:<entity>')` after every mutation.
+- Cache prefix ALWAYS `kiosco:*` — never `venue:*`, never loose, never per-id.
+- `'use cache'` cannot co-exist with `await searchParams`/`cookies()`/`headers()` in the same scope. Split into `loadCatalog()` (cached) + `Page()` (resolves searchParams outside cache scope).
+- Routes under `/admin/*` opt out of static prerender with `export const instant = false` on the layout. Route handlers (`app/api/**/route.ts`) opt out the same way — `export const dynamic`/`runtime` is rejected by Cache Components.
+- `createProtectedAction` calls `auth()` server-side. `proxy.ts` (Edge) imports only `auth.config.ts` to keep Prisma out of the Edge bundle.
 
-1. **Releer [`docs/PLANIFICACION.md`](docs/PLANIFICACION.md)** completo (especialmente la sección de la fase actual).
-2. **Revisar la tabla "Estado actual"** arriba. Confirmar en qué fase estamos.
-3. **Revisar memoria** (`mem_context`) por observaciones guardadas en sesiones anteriores.
-4. **Si hay pendientes críticos** (ver §Pendientes abajo), preguntar al usuario antes de implementar.
+### Server actions
+- Always `'use server'`. Return `ActionResult<T>` = `{ success: true, data } | { success: false, data: null, error: { message, cause? } }`.
+- Zod errors formatted as `path 🡆 message` strings (see `lib/server/actions/createAction.ts`).
+- Client errors via `react-hot-toast` (`showToast.error(result.error.message)`).
+- Auth/session error actions (`signIn`/`signOut`) bypass `createAction` (NextAuth requirement) and live under `lib/server/actions/auth/`.
 
-**Durante la sesión:**
+### UI primitives (adapted from carta-qr)
+- `components/Layouts/form/{Form,InputForm,SelectForm,SectionForm,TextareaForm}.tsx` — react-hook-form + zodResolver.
+- `components/Layouts/Modals/Modal.tsx` — props-based `open`/`onClose`, no context.
+- `components/UI/{Button,Loading,ModalActions,Switch,ImageForm,Icons}/*` — reusable, copy-paste-ready from carta-qr.
 
-- Si surge una decisión que cambia el plan → actualizar PLANIFICACION.md primero.
-- Si se completa una fase → actualizar la tabla "Estado actual" arriba.
-- Si se copia/adapt código de carta-qr → revisar que el archivo de origen no haya cambiado recientemente.
+### UploadThing lazy upload (server-side)
+- `<ImageForm>` stores `{ file: File }` in form state; **no upload until form submit**.
+- Server action calls `resolveImageUpload()` which invokes `uploadImageAction()` → `utapi.uploadFiles()` with `customId: kiosco/products/<uuid8>`.
+- `compensateOrphanedUpload({ uploadedFileKey, save })` rolls back the upload if the DB write fails.
+- `cleanupUploadThingFileIfNeeded(oldKey, newKey)` deletes the previous file on update.
+- Hard delete of a product always calls `deleteUploadThingFile(fileKey)` first.
 
-**Al cerrar sesión:**
+### Business rules in `useCases` (single source of truth)
+- **Category:** max 2 levels hierarchy; no self-parent; cannot convert a category into a sub if it already has children; cannot delete with products or subcategories.
+- **Product:** stock=0 sets `stockZeroAt = new Date()`; stock>0 clears it; price/stock are `Int` ARS; `decrementStock` rejects going negative.
+- **Client visibility:** only `isActive=true AND stock>0` products appear in the public catalog.
 
-- Marcar el progreso en la tabla "Estado actual".
-- Si hubo decisiones nuevas, confirmar que están en PLANIFICACION.md.
-- Guardar observaciones no obvias en memoria (`mem_save`).
+## Code Style
 
----
+- **Code:** English. **User-facing:** Rioplatense Spanish.
+- **Files:** kebab-case CSS modules, PascalCase components, camelCase utilities/actions.
+- **Imports:** `@/*` alias; group external → internal (`@/`) → relative. Top-level `import type` only.
+- **Biome** (`biome.json`) — semicolons required, single quotes, trailing commas, `lineWidth: 100`, 2-space indent. CSS files excluded.
+- **No comments** unless explicitly requested. Self-documenting code.
+- **Unused bindings** use `_` prefix (Biome `noUnusedVariables` honors `^_`). Never `// biome-ignore`.
 
-## Pendientes antes de implementar
+## Security
 
-Datos que faltan del usuario antes de empezar la Fase 1 (auth):
+- `ADMIN_EMAILS` (CSV) is the single source of truth for the whitelist. Parsed by `lib/env.ts` into `string[]`. Lowercased.
+- Auth redirects via the function form, never string concat. `proxy.ts` enforces the whitelist for `/admin/*`.
+- UploadThing routes live behind `auth()`. Cron endpoint validates `Authorization: Bearer ${CRON_SECRET}` (500 if `CRON_SECRET` not set, 401 if missing/wrong, 200 with `{ deletedCount, ids, durationMs }` on success).
+- Never log secrets, tokens, or credentials.
+- Public env vars (`NEXT_PUBLIC_*`) are the only ones exposed to the client bundle.
 
-- [ ] **Número de WhatsApp real de Gustavo** (formato E.164 sin `+`, ej: `5491145678901`)
-- [ ] **Emails concretos para `ADMIN_EMAILS`** (mínimo el de Gustavo)
-- [ ] **Nombre comercial del kiosco** (para header público y `<title>`)
-- [ ] **Logo del kiosco** (opcional, PNG/SVG cuadrado idealmente)
-- [ ] **Google OAuth client** creado en Google Cloud Console con redirect URI autorizado
+## Git
 
-Detalle y otros: [PLANIFICACION.md §11](docs/PLANIFICACION.md#11-pendientes-antes-de-implementación).
+Conventional commits with scopes. Common scopes: `auth`, `actions`, `admin`, `client`, `cron`, `crud`, `db`, `setup`, `config`, `docs`.
 
----
+Examples:
 
-## Referencias
+```
+feat(actions): add product server actions and UploadThing lazy upload
+fix(cron): handle empty candidates list
+chore(deps): bump next to 16.3.4
+docs: mark Phase 6 complete (deploy with end-to-end smoke test)
+```
 
-- [`docs/PLANIFICACION.md`](docs/PLANIFICACION.md) — Single source of truth (16 secciones, ~730 líneas)
-- `../carta-qr/` — Proyecto hermano, fuente de patrones y código reutilizable
-- `../carta-qr/docs/architecture/` — Patrones a reusar
-- `../carta-qr/AGENTS.md` — Ejemplo de estructura (referencia, no copiar literal)
+Subject line max 100 chars, imperative or infinitive mood. Body in present tense or imperative; bullets for multi-area changes. One concern per commit (entity files → actions → UI → docs).
 
----
+## Environment variables
 
-_Mantener este archivo bajo ~150 líneas. Si crece, extraer detalle a `docs/`._
+`.env.example` documents all of them with placeholders. Current production values are in Vercel project settings. Notable:
+
+- `NEXT_PUBLIC_APP_NAME` — kiosk display name (currently "Kiosco Lucas", temporary).
+- `NEXT_PUBLIC_WHATSAPP_NUMBER` — E.164 without `+`, e.g. `542234360228`.
+- `ADMIN_EMAILS` — CSV of allowed admin emails (lowercased by Zod).
+- `AUTH_SECRET` / `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — required for NextAuth.
+- `DATABASE_URL` — Neon connection string.
+- `UPLOADTHING_TOKEN` — only required for image uploads.
+- `CRON_SECRET` — required for the Vercel cron (Bearer token).
+
+## References
+
+- [`docs/PLANIFICACION.md`](docs/PLANIFICACION.md) — original plan, stack details, decisions log (sections §2 stack, §3 auth, §4 domain, §7 carta-qr patterns, §8 features, §9 phases).
+- `../carta-qr/AGENTS.md` — structural reference (sibling project, multi-tenant).
+- `../carta-qr/lib/`, `../carta-qr/components/` — reusable primitives and the source of truth for "how things look here".
+- Engram memory — patterns learned during implementation (search `kiosk-*` topic keys for the most relevant ones).
