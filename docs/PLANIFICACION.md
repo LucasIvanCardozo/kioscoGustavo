@@ -678,7 +678,7 @@ Plan tentativo. Cada fase termina con un entregable verificable (no necesariamen
 ```bash
 # === App ===
 NEXT_PUBLIC_APP_URL="http://localhost:3000"    # dev. Prod: https://kiosco-gustavo.vercel.app
-NEXT_PUBLIC_APP_NAME="Kiosco Lucas"           # nombre temporal, ver §11 — header + <title>
+NEXT_PUBLIC_APP_NAME="Kiosco Gustavo"           # nombre temporal, ver §11 — header + <title>
 NEXT_PUBLIC_WHATSAPP_NUMBER="542234360228"     # E.164 sin +. 54 (AR) + 223 (MDQ) + 4360228
 
 # === Auth ===
@@ -707,7 +707,7 @@ Estado actualizado al cierre de la sesión de planificación. Los resueltos qued
 
 - [x] **Número de WhatsApp real** — `542234360228` (E.164 sin `+`, AR + 223 + 4360228). Definido en sesión 2026-09-11.
 - [x] **Email whitelist admin** — `lucasivancardozo27@gmail.com` (único por ahora). Más adelante se puede sumar CSV de respaldos sin redeploy.
-- [x] **Nombre comercial** — `Kiosco Lucas` (temporal). Sustituir por el definitivo cuando se decida.
+- [x] **Nombre comercial** — `Kiosco Gustavo` (definitivo). Sustituir por el definitivo cuando se decida.
 - [ ] **Logo del kiosco** — pendiente. Mientras tanto el header público mostrará texto plano o avatar genérico (decidir en Fase 4).
 - [ ] **Google OAuth client + consent screen** — pendiente. Bloqueante para Fase 1. Crear client en Google Cloud Console con redirect URI `http://localhost:3000/api/auth/callback/google` (dev) y `https://kiosco-gustavo.vercel.app/api/auth/callback/google` (prod). Scopes: `openid email profile`.
 - [ ] **Lista inicial de categorías** — pendiente, se carga en sesión de Fase 2.
