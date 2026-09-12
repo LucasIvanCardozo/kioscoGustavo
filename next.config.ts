@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'ufs.sh' },
     ],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
 };
 
 export default nextConfig;
