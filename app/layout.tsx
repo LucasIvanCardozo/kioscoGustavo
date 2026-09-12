@@ -6,7 +6,7 @@ import './globals.css';
 import './themes/tokens.css';
 
 export const metadata: Metadata = {
-  title: 'Kiosco Lucas',
+  title: 'Kiosco Gustavo',
   description: 'Catálogo y panel admin del kiosco.',
 };
 

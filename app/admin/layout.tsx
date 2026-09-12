@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.brandTitle}>Kiosco Lucas</span>
+          <span className={styles.brandTitle}>Kiosco Gustavo</span>
           <span className={styles.brandTag}>Panel admin</span>
         </div>
         <div className={styles.userBlock}>

@@ -14,7 +14,7 @@ Entry point for agent sessions. Detailed architecture, decisions, and original p
 
 Single-tenant web app for the gustavo's kiosk (figures and collectibles, plus whatever comes next). Public catalog + WhatsApp deep-link to `Hello Gustavo!` admin panel for categories, products, and stock.
 
-- **Owner:** Gustavo (kiosk owner). **Dev/admin:** Lucas.
+- **Owner:** Gustavo (kiosk owner). **Dev/admin:** Gustavo.
 - **Production:** `https://kiosco-gustavo-three.vercel.app/` (Vercel + Neon PostgreSQL).
 - **Single-tenant:** no `venueId`, no roles, no subdomains, no Soketi/realtime. All updates via cache + `updateTag`.
 - **Reference implementation:** `../carta-qr/` (multi-tenant sibling). Many UI primitives and patterns are adapted from there.
@@ -159,7 +159,7 @@ Subject line max 100 chars, imperative or infinitive mood. Body in present tense
 
 `.env.example` documents all of them with placeholders. Current production values are in Vercel project settings. Notable:
 
-- `NEXT_PUBLIC_APP_NAME` — kiosk display name (currently "Kiosco Lucas", temporary).
+- `NEXT_PUBLIC_APP_NAME` — kiosk display name (currently "Kiosco Gustavo", temporary).
 - `NEXT_PUBLIC_WHATSAPP_NUMBER` — E.164 without `+`, e.g. `542234360228`.
 - `ADMIN_EMAILS` — CSV of allowed admin emails (lowercased by Zod).
 - `AUTH_SECRET` / `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — required for NextAuth.
