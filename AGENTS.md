@@ -1,4 +1,4 @@
-# AGENTS.md — Kiosco de Gustavo
+# AGENTS.md — kioscoGustavo
 
 Entry point for agent sessions. Detailed architecture, decisions, and original plan live in [docs/PLANIFICACION.md](docs/PLANIFICACION.md). **Keep this file under ~150 lines**; extract detail to `docs/` if it grows.
 
