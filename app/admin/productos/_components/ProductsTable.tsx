@@ -11,7 +11,8 @@ import {
 import { faEdit, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Image from 'next/image';
-import { useMemo, useOptimistic, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState, useTransition } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/UI/Button';
 import type { ProductWithCategory } from '@/lib/shared/types/product.types';
@@ -39,11 +40,6 @@ type ModalState =
 
 type StatusFilter = 'all' | 'active' | 'paused' | 'outOfStock';
 
-type OptimisticAdjustment =
-  | { kind: 'increment'; productId: string }
-  | { kind: 'decrement'; productId: string }
-  | { kind: 'toggle'; productId: string };
-
 const formatPrice = (price: number): string => `$ ${new Intl.NumberFormat('es-AR').format(price)}`;
 
 const stockVariant = (stock: number): 'high' | 'medium' | 'low' | 'empty' => {
@@ -59,6 +55,53 @@ export const ProductsTable = ({ products, categories }: Props) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [, startTransition] = useTransition();
+  const router = useRouter();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  const handleIncrement = (productId: string) => {
+    startTransition(async () => {
+      setPendingId(productId);
+      const result = await incrementStock({ id: productId, delta: 1 });
+      if (!result.success) {
+        setPendingId(null);
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success('Stock +1');
+      setPendingId(null);
+      router.refresh();
+    });
+  };
+
+  const handleDecrement = (productId: string) => {
+    startTransition(async () => {
+      setPendingId(productId);
+      const result = await decrementStock({ id: productId, delta: 1 });
+      if (!result.success) {
+        setPendingId(null);
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success('Stock −1');
+      setPendingId(null);
+      router.refresh();
+    });
+  };
+
+  const handleToggleActive = (productId: string) => {
+    startTransition(async () => {
+      setPendingId(productId);
+      const result = await toggleProductActive({ id: productId });
+      if (!result.success) {
+        setPendingId(null);
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success('Estado actualizado');
+      setPendingId(null);
+      router.refresh();
+    });
+  };
 
   const close = () => setModal({ kind: 'closed' });
 
@@ -71,37 +114,6 @@ export const ProductsTable = ({ products, categories }: Props) => {
       return true;
     });
   }, [products, selectedCategory, statusFilter]);
-
-  const [optimisticProducts, applyOptimistic] = useOptimistic<
-    ProductWithCategory[],
-    OptimisticAdjustment
-  >(filteredProducts, (current, adjustment) => {
-    if (adjustment.kind === 'toggle') {
-      return current.map((product) =>
-        product.id === adjustment.productId ? { ...product, isActive: !product.isActive } : product,
-      );
-    }
-    if (adjustment.kind === 'increment') {
-      return current.map((product) =>
-        product.id === adjustment.productId
-          ? {
-              ...product,
-              stock: product.stock + 1,
-              stockZeroAt: null,
-            }
-          : product,
-      );
-    }
-    return current.map((product) =>
-      product.id === adjustment.productId
-        ? {
-            ...product,
-            stock: Math.max(0, product.stock - 1),
-            stockZeroAt: product.stock - 1 <= 0 ? new Date() : product.stockZeroAt,
-          }
-        : product,
-    );
-  });
 
   const columns: ColumnDef<ProductWithCategory>[] = [
     {
@@ -161,6 +173,7 @@ export const ProductsTable = ({ products, categories }: Props) => {
         const product = row.original;
         const variant = stockVariant(product.stock);
         const stockLabel = product.stock === 0 ? 'Sin stock' : `${product.stock} u.`;
+        const isPending = pendingId === product.id;
         return (
           <div className={styles.stockCell}>
             <span className={`${styles.stockBadge} ${styles[`stock-${variant}`]}`}>
@@ -170,16 +183,8 @@ export const ProductsTable = ({ products, categories }: Props) => {
               <button
                 type="button"
                 className={styles.stockButton}
-                onClick={() => {
-                  startTransition(async () => {
-                    applyOptimistic({ kind: 'increment', productId: product.id });
-                    const result = await incrementStock({ id: product.id, delta: 1 });
-                    if (!result.success) {
-                      toast.error(result.error.message);
-                    }
-                  });
-                }}
-                disabled={product.stock >= 9999}
+                onClick={() => handleIncrement(product.id)}
+                disabled={isPending || product.stock >= 9999}
                 aria-label={`Sumar 1 al stock de ${product.name}`}
                 title="Sumar 1"
               >
@@ -188,16 +193,8 @@ export const ProductsTable = ({ products, categories }: Props) => {
               <button
                 type="button"
                 className={styles.stockButton}
-                onClick={() => {
-                  startTransition(async () => {
-                    applyOptimistic({ kind: 'decrement', productId: product.id });
-                    const result = await decrementStock({ id: product.id, delta: 1 });
-                    if (!result.success) {
-                      toast.error(result.error.message);
-                    }
-                  });
-                }}
-                disabled={product.stock === 0}
+                onClick={() => handleDecrement(product.id)}
+                disabled={isPending || product.stock === 0}
                 aria-label={`Restar 1 al stock de ${product.name}`}
                 title="Restar 1"
               >
@@ -214,20 +211,14 @@ export const ProductsTable = ({ products, categories }: Props) => {
       header: 'Estado',
       cell: ({ row }) => {
         const product = row.original;
+        const isPending = pendingId === product.id;
         return (
           <label className={styles.statusToggle}>
             <input
               type="checkbox"
               checked={product.isActive}
-              onChange={() => {
-                startTransition(async () => {
-                  applyOptimistic({ kind: 'toggle', productId: product.id });
-                  const result = await toggleProductActive({ id: product.id });
-                  if (!result.success) {
-                    toast.error(result.error.message);
-                  }
-                });
-              }}
+              onChange={() => handleToggleActive(product.id)}
+              disabled={isPending}
               className={styles.statusCheckbox}
               aria-label={`${product.isActive ? 'Pausar' : 'Activar'} ${product.name}`}
             />
@@ -272,7 +263,7 @@ export const ProductsTable = ({ products, categories }: Props) => {
   ];
 
   const table = useReactTable({
-    data: optimisticProducts,
+    data: filteredProducts,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
