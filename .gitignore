@@ -1,6 +1,7 @@
 # Local Pi runtime state
 .atl/
 .pi/
+.agents/
 
 # --- Dependencies ------------------------------------------------------------
 node_modules/
