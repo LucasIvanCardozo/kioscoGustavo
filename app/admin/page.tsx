@@ -4,6 +4,8 @@ import { auth } from '@/lib/server/auth/auth';
 import db from '@/lib/server/db/db';
 import styles from './page.module.css';
 
+export const instant = false;
+
 export default async function AdminPage() {
   const session = await auth();
   const displayEmail = session?.user?.email ?? '';
@@ -18,8 +20,8 @@ export default async function AdminPage() {
       <section className={styles.welcome}>
         <h1 className={styles.title}>Bienvenido, {displayEmail}</h1>
         <p className={styles.subtitle}>
-          Acá vas a gestionar categorías, productos y stock. Esta pantalla es solo un placeholder
-          de Fase 1.
+          Acá vas a gestionar categorías, productos y stock. Esta pantalla es solo un placeholder de
+          Fase 1.
         </p>
       </section>
 
