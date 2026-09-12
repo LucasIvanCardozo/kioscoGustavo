@@ -12,6 +12,8 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "dotenv -e .env -- sh -c 'prisma migrate dev --name \"${MIGRATION_NAME:-init}\"'",
+    "db:reset": "dotenv -e .env -- prisma migrate reset --force",
+    "db:pr:reset": "dotenv -e .env.production -- prisma migrate reset --force",
     "db:studio": "dotenv -e .env -- prisma studio"
   },
   "dependencies": {
