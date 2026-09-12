@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-table';
 import { faEdit, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/UI/Button';
 import type { CategoryWithCount } from '@/lib/shared/types/category.types';
 import { CategoryModal } from './CategoryModal';
@@ -36,85 +36,82 @@ export const CategoriesTable = ({ categories, roots }: Props) => {
 
   const close = () => setModal({ kind: 'closed' });
 
-  const columns = useMemo<ColumnDef<CategoryWithCount>[]>(
-    () => [
-      {
-        id: 'name',
-        accessorFn: (row) => row.name,
-        header: 'Nombre',
-        cell: ({ row }) => (
-          <div className={styles.nameCell}>
-            <span className={styles.name}>{row.original.name}</span>
-            {row.original.description && (
-              <span className={styles.description}>{row.original.description}</span>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: 'parent',
-        accessorFn: (row) => row.parent?.name ?? '',
-        header: 'Padre',
-        cell: ({ row }) => (
-          <span className={styles.mutedCell}>{row.original.parent?.name ?? '—'}</span>
-        ),
-      },
-      {
-        id: 'order',
-        accessorKey: 'order',
-        header: 'Orden',
-        cell: ({ getValue }) => <span className={styles.countCell}>{getValue<number>()}</span>,
-      },
-      {
-        id: 'products',
-        accessorFn: (row) => row._count.products,
-        header: '# Productos',
-        cell: ({ getValue }) => <span className={styles.countCell}>{getValue<number>()}</span>,
-      },
-      {
-        id: 'children',
-        accessorFn: (row) => row._count.children,
-        header: '# Subcategorías',
-        cell: ({ getValue }) => <span className={styles.countCell}>{getValue<number>()}</span>,
-      },
-      {
-        id: 'actions',
-        header: '',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className={styles.actionsCell}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setModal({ kind: 'edit', category: row.original })}
-              aria-label={`Editar ${row.original.name}`}
-            >
-              <FontAwesomeIcon icon={faEdit} />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setModal({ kind: 'delete', category: row.original })}
-              aria-label={`Eliminar ${row.original.name}`}
-              disabled={row.original._count.products > 0 || row.original._count.children > 0}
-              title={
-                row.original._count.products > 0
-                  ? 'Tiene productos asociados'
-                  : row.original._count.children > 0
-                    ? 'Tiene subcategorías'
-                    : 'Eliminar'
-              }
-            >
-              <FontAwesomeIcon icon={faTrash} />
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
+  const columns: ColumnDef<CategoryWithCount>[] = [
+    {
+      id: 'name',
+      accessorFn: (row) => row.name,
+      header: 'Nombre',
+      cell: ({ row }) => (
+        <div className={styles.nameCell}>
+          <span className={styles.name}>{row.original.name}</span>
+          {row.original.description && (
+            <span className={styles.description}>{row.original.description}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'parent',
+      accessorFn: (row) => row.parent?.name ?? '',
+      header: 'Padre',
+      cell: ({ row }) => (
+        <span className={styles.mutedCell}>{row.original.parent?.name ?? '—'}</span>
+      ),
+    },
+    {
+      id: 'order',
+      accessorKey: 'order',
+      header: 'Orden',
+      cell: ({ getValue }) => <span className={styles.countCell}>{getValue<number>()}</span>,
+    },
+    {
+      id: 'products',
+      accessorFn: (row) => row._count.products,
+      header: '# Productos',
+      cell: ({ getValue }) => <span className={styles.countCell}>{getValue<number>()}</span>,
+    },
+    {
+      id: 'children',
+      accessorFn: (row) => row._count.children,
+      header: '# Subcategorías',
+      cell: ({ getValue }) => <span className={styles.countCell}>{getValue<number>()}</span>,
+    },
+    {
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className={styles.actionsCell}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setModal({ kind: 'edit', category: row.original })}
+            aria-label={`Editar ${row.original.name}`}
+          >
+            <FontAwesomeIcon icon={faEdit} />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setModal({ kind: 'delete', category: row.original })}
+            aria-label={`Eliminar ${row.original.name}`}
+            disabled={row.original._count.products > 0 || row.original._count.children > 0}
+            title={
+              row.original._count.products > 0
+                ? 'Tiene productos asociados'
+                : row.original._count.children > 0
+                  ? 'Tiene subcategorías'
+                  : 'Eliminar'
+            }
+          >
+            <FontAwesomeIcon icon={faTrash} />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   const table = useReactTable({
     data: categories,

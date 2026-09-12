@@ -103,176 +103,173 @@ export const ProductsTable = ({ products, categories }: Props) => {
     );
   });
 
-  const columns = useMemo<ColumnDef<ProductWithCategory>[]>(
-    () => [
-      {
-        id: 'image',
-        header: '',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className={styles.thumbnailCell}>
-            {row.original.image ? (
-              <Image
-                src={row.original.image}
-                alt={row.original.name}
-                width={40}
-                height={40}
-                className={styles.thumbnail}
-              />
-            ) : (
-              <div className={styles.thumbnailPlaceholder}>
-                <span aria-hidden="true">—</span>
-              </div>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: 'name',
-        accessorFn: (row) => row.name,
-        header: 'Nombre',
-        cell: ({ row }) => (
-          <div className={styles.nameCell}>
-            <span className={styles.name}>{row.original.name}</span>
-            {row.original.description && (
-              <span className={styles.description}>{row.original.description}</span>
-            )}
-          </div>
-        ),
-      },
-      {
-        id: 'category',
-        accessorFn: (row) => row.category.name,
-        header: 'Categoría',
-        cell: ({ row }) => <span className={styles.mutedCell}>{row.original.category.name}</span>,
-      },
-      {
-        id: 'price',
-        accessorKey: 'price',
-        header: 'Precio',
-        cell: ({ getValue }) => (
-          <span className={styles.priceCell}>{formatPrice(getValue<number>())}</span>
-        ),
-      },
-      {
-        id: 'stock',
-        accessorKey: 'stock',
-        header: 'Stock',
-        cell: ({ row }) => {
-          const product = row.original;
-          const variant = stockVariant(product.stock);
-          const stockLabel = product.stock === 0 ? 'Sin stock' : `${product.stock} u.`;
-          return (
-            <div className={styles.stockCell}>
-              <span className={`${styles.stockBadge} ${styles[`stock-${variant}`]}`}>
-                {stockLabel}
-              </span>
-              <div className={styles.stockButtons}>
-                <button
-                  type="button"
-                  className={styles.stockButton}
-                  onClick={() => {
-                    startTransition(async () => {
-                      applyOptimistic({ kind: 'increment', productId: product.id });
-                      const result = await incrementStock({ id: product.id, delta: 1 });
-                      if (!result.success) {
-                        toast.error(result.error.message);
-                      }
-                    });
-                  }}
-                  disabled={product.stock >= 9999}
-                  aria-label={`Sumar 1 al stock de ${product.name}`}
-                  title="Sumar 1"
-                >
-                  +1
-                </button>
-                <button
-                  type="button"
-                  className={styles.stockButton}
-                  onClick={() => {
-                    startTransition(async () => {
-                      applyOptimistic({ kind: 'decrement', productId: product.id });
-                      const result = await decrementStock({ id: product.id, delta: 1 });
-                      if (!result.success) {
-                        toast.error(result.error.message);
-                      }
-                    });
-                  }}
-                  disabled={product.stock === 0}
-                  aria-label={`Restar 1 al stock de ${product.name}`}
-                  title="Restar 1"
-                >
-                  −1
-                </button>
-              </div>
+  const columns: ColumnDef<ProductWithCategory>[] = [
+    {
+      id: 'image',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className={styles.thumbnailCell}>
+          {row.original.image ? (
+            <Image
+              src={row.original.image}
+              alt={row.original.name}
+              width={40}
+              height={40}
+              className={styles.thumbnail}
+            />
+          ) : (
+            <div className={styles.thumbnailPlaceholder}>
+              <span aria-hidden="true">—</span>
             </div>
-          );
-        },
-      },
-      {
-        id: 'isActive',
-        accessorFn: (row) => (row.isActive ? 1 : 0),
-        header: 'Estado',
-        cell: ({ row }) => {
-          const product = row.original;
-          return (
-            <label className={styles.statusToggle}>
-              <input
-                type="checkbox"
-                checked={product.isActive}
-                onChange={() => {
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'name',
+      accessorFn: (row) => row.name,
+      header: 'Nombre',
+      cell: ({ row }) => (
+        <div className={styles.nameCell}>
+          <span className={styles.name}>{row.original.name}</span>
+          {row.original.description && (
+            <span className={styles.description}>{row.original.description}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'category',
+      accessorFn: (row) => row.category.name,
+      header: 'Categoría',
+      cell: ({ row }) => <span className={styles.mutedCell}>{row.original.category.name}</span>,
+    },
+    {
+      id: 'price',
+      accessorKey: 'price',
+      header: 'Precio',
+      cell: ({ getValue }) => (
+        <span className={styles.priceCell}>{formatPrice(getValue<number>())}</span>
+      ),
+    },
+    {
+      id: 'stock',
+      accessorKey: 'stock',
+      header: 'Stock',
+      cell: ({ row }) => {
+        const product = row.original;
+        const variant = stockVariant(product.stock);
+        const stockLabel = product.stock === 0 ? 'Sin stock' : `${product.stock} u.`;
+        return (
+          <div className={styles.stockCell}>
+            <span className={`${styles.stockBadge} ${styles[`stock-${variant}`]}`}>
+              {stockLabel}
+            </span>
+            <div className={styles.stockButtons}>
+              <button
+                type="button"
+                className={styles.stockButton}
+                onClick={() => {
                   startTransition(async () => {
-                    applyOptimistic({ kind: 'toggle', productId: product.id });
-                    const result = await toggleProductActive({ id: product.id });
+                    applyOptimistic({ kind: 'increment', productId: product.id });
+                    const result = await incrementStock({ id: product.id, delta: 1 });
                     if (!result.success) {
                       toast.error(result.error.message);
                     }
                   });
                 }}
-                className={styles.statusCheckbox}
-                aria-label={`${product.isActive ? 'Pausar' : 'Activar'} ${product.name}`}
-              />
-              <span
-                className={`${styles.statusBadge} ${
-                  product.isActive ? styles.statusActive : styles.statusPaused
-                }`}
+                disabled={product.stock >= 9999}
+                aria-label={`Sumar 1 al stock de ${product.name}`}
+                title="Sumar 1"
               >
-                {product.isActive ? 'Activo' : 'Pausado'}
-              </span>
-            </label>
-          );
-        },
-      },
-      {
-        id: 'actions',
-        header: '',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className={styles.actionsCell}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setModal({ kind: 'edit', product: row.original })}
-              aria-label={`Editar ${row.original.name}`}
-            >
-              <FontAwesomeIcon icon={faEdit} />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setModal({ kind: 'delete', product: row.original })}
-              aria-label={`Eliminar ${row.original.name}`}
-            >
-              <FontAwesomeIcon icon={faTrash} />
-            </Button>
+                +1
+              </button>
+              <button
+                type="button"
+                className={styles.stockButton}
+                onClick={() => {
+                  startTransition(async () => {
+                    applyOptimistic({ kind: 'decrement', productId: product.id });
+                    const result = await decrementStock({ id: product.id, delta: 1 });
+                    if (!result.success) {
+                      toast.error(result.error.message);
+                    }
+                  });
+                }}
+                disabled={product.stock === 0}
+                aria-label={`Restar 1 al stock de ${product.name}`}
+                title="Restar 1"
+              >
+                −1
+              </button>
+            </div>
           </div>
-        ),
+        );
       },
-    ],
-    [applyOptimistic],
-  );
+    },
+    {
+      id: 'isActive',
+      accessorFn: (row) => (row.isActive ? 1 : 0),
+      header: 'Estado',
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <label className={styles.statusToggle}>
+            <input
+              type="checkbox"
+              checked={product.isActive}
+              onChange={() => {
+                startTransition(async () => {
+                  applyOptimistic({ kind: 'toggle', productId: product.id });
+                  const result = await toggleProductActive({ id: product.id });
+                  if (!result.success) {
+                    toast.error(result.error.message);
+                  }
+                });
+              }}
+              className={styles.statusCheckbox}
+              aria-label={`${product.isActive ? 'Pausar' : 'Activar'} ${product.name}`}
+            />
+            <span
+              className={`${styles.statusBadge} ${
+                product.isActive ? styles.statusActive : styles.statusPaused
+              }`}
+            >
+              {product.isActive ? 'Activo' : 'Pausado'}
+            </span>
+          </label>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className={styles.actionsCell}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setModal({ kind: 'edit', product: row.original })}
+            aria-label={`Editar ${row.original.name}`}
+          >
+            <FontAwesomeIcon icon={faEdit} />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setModal({ kind: 'delete', product: row.original })}
+            aria-label={`Eliminar ${row.original.name}`}
+          >
+            <FontAwesomeIcon icon={faTrash} />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   const table = useReactTable({
     data: optimisticProducts,
