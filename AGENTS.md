@@ -82,7 +82,12 @@ next.config.ts            → cacheComponents + agentRules + images.remotePatter
 
 ## Patterns
 
+### UI patterns → [docs/patterns/](docs/patterns/README.md)
+
+- [Tables](docs/patterns/tables.md) — `@tanstack/react-table` with `getCoreRowModel` + `getSortedRowModel`, local sort state. **No `useOptimistic`** (loops with Next 16 cache); **no `useMemo(columns, [...])`** (identity loop); CSS rows via `border-top` on `<tr>` (not on `<td>`) so descendants with `overflow: hidden` don't clip the line; last row gets explicit `border-bottom` to close the table visually.
+
 ### Entity files (5-file domain convention)
+
 - `lib/shared/schemas/<entity>.schemas.ts` — Zod (payload, form, create, update, delete).
 - `lib/shared/types/<entity>.types.ts` — Prisma-derived types via `Prisma.<Entity>GetPayload<{ include: typeof INCLUDE }>`.
 - `lib/server/db/repository/<entity>.repository.ts` — pure Prisma access, factory `repository(db)`.
@@ -90,9 +95,11 @@ next.config.ts            → cacheComponents + agentRules + images.remotePatter
 - `lib/server/actions/<entity>.action.ts` — `createProtectedAction` wrappers + `updateTag('kiosco:<entity>')`.
 
 ### `createProtectedAction` (single-tenant)
+
 Wraps `createAction` + `auth()`. ActionContext = `{ data, session, db }`. **No** `getVenueId`, no `allowedRoles`, no `verifyVenueAccess`. Whitelist lives in `proxy.ts` via `authCallbacks.authorized` — never duplicated in actions.
 
 ### Cache (Cache Components / Next 16)
+
 - `'use cache'` + `cacheTag('kiosco:<entity>')` for reads.
 - `updateTag('kiosco:<entity>')` after every mutation.
 - Cache prefix ALWAYS `kiosco:*` — never `venue:*`, never loose, never per-id.
@@ -101,17 +108,20 @@ Wraps `createAction` + `auth()`. ActionContext = `{ data, session, db }`. **No**
 - `createProtectedAction` calls `auth()` server-side. `proxy.ts` (Edge) imports only `auth.config.ts` to keep Prisma out of the Edge bundle.
 
 ### Server actions
+
 - Always `'use server'`. Return `ActionResult<T>` = `{ success: true, data } | { success: false, data: null, error: { message, cause? } }`.
 - Zod errors formatted as `path 🡆 message` strings (see `lib/server/actions/createAction.ts`).
 - Client errors via `react-hot-toast` (`showToast.error(result.error.message)`).
 - Auth/session error actions (`signIn`/`signOut`) bypass `createAction` (NextAuth requirement) and live under `lib/server/actions/auth/`.
 
 ### UI primitives (adapted from carta-qr)
+
 - `components/Layouts/form/{Form,InputForm,SelectForm,SectionForm,TextareaForm}.tsx` — react-hook-form + zodResolver.
 - `components/Layouts/Modals/Modal.tsx` — props-based `open`/`onClose`, no context.
 - `components/UI/{Button,Loading,ModalActions,Switch,ImageForm,Icons}/*` — reusable, copy-paste-ready from carta-qr.
 
 ### UploadThing lazy upload (server-side)
+
 - `<ImageForm>` stores `{ file: File }` in form state; **no upload until form submit**.
 - Server action calls `resolveImageUpload()` which invokes `uploadImageAction()` → `utapi.uploadFiles()` with `customId: kiosco/products/<uuid8>`.
 - `compensateOrphanedUpload({ uploadedFileKey, save })` rolls back the upload if the DB write fails.
@@ -119,6 +129,7 @@ Wraps `createAction` + `auth()`. ActionContext = `{ data, session, db }`. **No**
 - Hard delete of a product always calls `deleteUploadThingFile(fileKey)` first.
 
 ### Business rules in `useCases` (single source of truth)
+
 - **Category:** max 2 levels hierarchy; no self-parent; cannot convert a category into a sub if it already has children; cannot delete with products or subcategories.
 - **Product:** stock=0 sets `stockZeroAt = new Date()`; stock>0 clears it; price/stock are `Int` ARS; `decrementStock` rejects going negative.
 - **Client visibility:** only `isActive=true AND stock>0` products appear in the public catalog.
