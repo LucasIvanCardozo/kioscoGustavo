@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { env } from '@/lib/env';
 import { buildWhatsAppLink } from '@/lib/shared/utils/whatsapp';
 import styles from './ProductCard.module.css';
 
@@ -15,6 +14,7 @@ type Props = {
     image: string | null;
     category: { id: string; name: string };
   };
+  whatsappNumber: string;
   onImageClick: (src: string, alt: string) => void;
 };
 
@@ -25,7 +25,7 @@ const formatPrice = (price: number): string =>
     maximumFractionDigits: 0,
   }).format(price);
 
-export function ProductCard({ product, onImageClick }: Props) {
+export function ProductCard({ product, whatsappNumber, onImageClick }: Props) {
   const showLastUnit = product.stock === 1;
   const showRemaining = product.stock > 1 && product.stock <= 5;
 
@@ -60,7 +60,9 @@ export function ProductCard({ product, onImageClick }: Props) {
             🛍️
           </div>
         )}
-        {showLastUnit && <span className={`${styles.badge} ${styles.badgeAlert}`}>Última unidad</span>}
+        {showLastUnit && (
+          <span className={`${styles.badge} ${styles.badgeAlert}`}>Última unidad</span>
+        )}
         {showRemaining && (
           <span className={`${styles.badge} ${styles.badgeSoft}`}>Quedan {product.stock}</span>
         )}
@@ -73,7 +75,7 @@ export function ProductCard({ product, onImageClick }: Props) {
       <div className={styles.footer}>
         <span className={styles.price}>{formatPrice(product.price)}</span>
         <a
-          href={buildWhatsAppLink(env.NEXT_PUBLIC_WHATSAPP_NUMBER, product.name)}
+          href={buildWhatsAppLink(whatsappNumber, product.name)}
           target="_blank"
           rel="noopener noreferrer"
           className={styles.cta}

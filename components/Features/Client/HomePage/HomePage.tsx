@@ -92,7 +92,10 @@ export async function HomePage({ roots, products, selectedCategoryId }: Props) {
             <p className={styles.emptyText}>{emptyMessage}</p>
           </div>
         ) : (
-          <ProductGrid products={filteredProducts} />
+          <ProductGrid
+            products={filteredProducts}
+            whatsappNumber={env.NEXT_PUBLIC_WHATSAPP_NUMBER}
+          />
         )}
       </main>
     </div>

@@ -17,11 +17,12 @@ type ProductForGrid = {
 
 type Props = {
   products: ProductForGrid[];
+  whatsappNumber: string;
 };
 
 type SelectedImage = { src: string; alt: string };
 
-export function ProductGrid({ products }: Props) {
+export function ProductGrid({ products, whatsappNumber }: Props) {
   const [selected, setSelected] = useState<SelectedImage | null>(null);
 
   const handleImageClick = useCallback((src: string, alt: string) => {
@@ -39,6 +40,7 @@ export function ProductGrid({ products }: Props) {
           <ProductCard
             key={product.id}
             product={product}
+            whatsappNumber={whatsappNumber}
             onImageClick={handleImageClick}
           />
         ))}
