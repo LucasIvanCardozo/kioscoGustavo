@@ -12,7 +12,7 @@ import { faEdit, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/UI/Button';
 import type { ProductWithCategory } from '@/lib/shared/types/product.types';
@@ -57,12 +57,32 @@ export const ProductsTable = ({ products, categories }: Props) => {
   const [, startTransition] = useTransition();
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [localProducts, setLocalProducts] = useState<ProductWithCategory[]>(products);
+
+  useEffect(() => {
+    setLocalProducts(products);
+  }, [products]);
 
   const handleIncrement = (productId: string) => {
+    setLocalProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, stock: p.stock + 1, stockZeroAt: null } : p)),
+    );
+
     startTransition(async () => {
       setPendingId(productId);
       const result = await incrementStock({ id: productId, delta: 1 });
       if (!result.success) {
+        setLocalProducts((prev) =>
+          prev.map((p) =>
+            p.id === productId
+              ? {
+                  ...p,
+                  stock: p.stock - 1,
+                  stockZeroAt: p.stock - 1 <= 0 ? p.stockZeroAt : null,
+                }
+              : p,
+          ),
+        );
         setPendingId(null);
         toast.error(result.error.message);
         return;
@@ -74,10 +94,27 @@ export const ProductsTable = ({ products, categories }: Props) => {
   };
 
   const handleDecrement = (productId: string) => {
+    setLocalProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              stock: p.stock - 1,
+              stockZeroAt: p.stock - 1 === 0 ? new Date() : null,
+            }
+          : p,
+      ),
+    );
+
     startTransition(async () => {
       setPendingId(productId);
       const result = await decrementStock({ id: productId, delta: 1 });
       if (!result.success) {
+        setLocalProducts((prev) =>
+          prev.map((p) =>
+            p.id === productId ? { ...p, stock: p.stock + 1, stockZeroAt: null } : p,
+          ),
+        );
         setPendingId(null);
         toast.error(result.error.message);
         return;
@@ -89,10 +126,17 @@ export const ProductsTable = ({ products, categories }: Props) => {
   };
 
   const handleToggleActive = (productId: string) => {
+    setLocalProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, isActive: !p.isActive } : p)),
+    );
+
     startTransition(async () => {
       setPendingId(productId);
       const result = await toggleProductActive({ id: productId });
       if (!result.success) {
+        setLocalProducts((prev) =>
+          prev.map((p) => (p.id === productId ? { ...p, isActive: !p.isActive } : p)),
+        );
         setPendingId(null);
         toast.error(result.error.message);
         return;
@@ -106,14 +150,14 @@ export const ProductsTable = ({ products, categories }: Props) => {
   const close = () => setModal({ kind: 'closed' });
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    return localProducts.filter((product) => {
       if (selectedCategory !== '' && product.categoryId !== selectedCategory) return false;
       if (statusFilter === 'active' && !product.isActive) return false;
       if (statusFilter === 'paused' && product.isActive) return false;
       if (statusFilter === 'outOfStock' && product.stock !== 0) return false;
       return true;
     });
-  }, [products, selectedCategory, statusFilter]);
+  }, [localProducts, selectedCategory, statusFilter]);
 
   const columns: ColumnDef<ProductWithCategory>[] = [
     {
