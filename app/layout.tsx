@@ -22,6 +22,10 @@ const caprasimo = Caprasimo({
 export const metadata: Metadata = {
   title: 'Kiosco Gustavo',
   description: 'Catálogo y panel admin del kiosco.',
+  openGraph: {
+    locale: 'es_AR',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
