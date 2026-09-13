@@ -1,10 +1,11 @@
 'use client';
 
-import { faX } from '@fortawesome/free-solid-svg-icons';
+import { faCircleNotch, faX } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/UI/Button';
+import { compressImageForUpload } from '@/lib/shared/image-compressor';
 import { MAX_UPLOAD_SIZE } from '@/lib/shared/constants/upload';
 import type { ImageValue } from '@/lib/shared/types/image';
 import styles from './image-form.module.css';
@@ -25,6 +26,7 @@ interface Props {
 export const ImageForm = ({ value, onChange, label, error }: Props) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   const localFile =
     value && typeof value === 'object' && 'file' in value && value.file instanceof File
@@ -47,7 +49,7 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
   const previewUrl = remoteUrl ?? localPreview;
   const hasImage = previewUrl !== null;
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_UPLOAD_SIZE) {
@@ -57,8 +59,17 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
       return;
     }
     setLocalError(null);
-    onChange({ file });
-    event.target.value = '';
+    setIsCompressing(true);
+    try {
+      const compressed = await compressImageForUpload(file);
+      onChange({ file: compressed });
+    } catch {
+      setLocalError('No se pudo procesar la imagen. Probá con otra.');
+      onChange('');
+    } finally {
+      setIsCompressing(false);
+      event.target.value = '';
+    }
   };
 
   const handleRemove = () => {
@@ -77,7 +88,12 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
     <fieldset className={styles.container}>
       {label && <legend className={styles.label}>{label}</legend>}
       <div className={`${styles.wrapper} ${isInvalid ? styles.isInvalid : ''}`}>
-        {hasImage ? (
+        {isCompressing ? (
+          <div className={styles.compressing}>
+            <FontAwesomeIcon icon={faCircleNotch} spin className={styles.spinner} />
+            <span>Procesando imagen…</span>
+          </div>
+        ) : hasImage ? (
           <div className={styles.preview}>
             <Image
               src={previewUrl ?? ''}
@@ -113,10 +129,11 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
               Subir imagen
             </Button>
             <p className={styles.hint}>JPG/PNG/WEBP, máximo {formatBytes(MAX_UPLOAD_SIZE)}.</p>
+            {localError && <p className={styles.localError}>{localError}</p>}
           </div>
         )}
       </div>
-      {hasImage && (
+      {hasImage && !isCompressing && (
         <div className={styles.changeRow}>
           <input
             ref={fileInputRef}
