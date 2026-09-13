@@ -1,37 +1,75 @@
 /* ============================================
-   THEMES.CSS — Selector de temas
+   TOKENS.CSS — Sistema de tokens del kiosco
    ============================================
+   Capa 1 (theme.css):   --palette-* ramps en OKLch
+   Capa 2 (este archivo): --color-* alias semánticos + primitivos
+   Capa 3 (consumers):   CSS Modules y TSX (solo consumen --color-*)
 
-   All themes are loaded simultaneously.
-   The active theme is set via data-theme attribute on <html>.
-   Each theme file defines color tokens in OKLch.
-
-   Estructura de 3 capas:
-   1. @import — temas individuales (deben ir primero)
-   2. Primitivas (este archivo) — espaciado, tipografía, radios, transiciones, sombras
-   3. Estilos base — reset, scrollbar, utilidades
-
-   Los temas individuales SOLO definen colores OKLch. NO redeclaran espaciado/tipografía.
+   Single-tenant app: no multi-theme. Los tokens semánticos viven en :root
+   directamente; no hay selector [data-theme=*].
    ============================================ */
 
+@import url('./theme.css');
+
 /* ============================================
-   CAPA 1: TEMAS INDIVIDUALES (imports primero)
+   CAPA 2: ALIAS SEMÁNTICOS
    ============================================ */
 
-@import url('./theme-default.css');
-@import url('./theme-dark.css');
-@import url('./theme-blue.css');
-@import url('./theme-green.css');
-@import url('./theme-purple.css');
-@import url('./theme-ficients.css');
+:root {
+  /* Fondos — cream cálido de fondo, blanco puro para cards */
+  --color-background: var(--palette-neutral-50);
+  --color-surface: var(--palette-neutral-100);
+  --color-surface-hover: var(--palette-neutral-200);
+  --color-border: var(--palette-neutral-300);
+  --color-border-hover: var(--palette-neutral-400);
+  --color-overlay: oklch(0% 0 0 / 0.5);
+
+  /* Texto */
+  --color-text-primary: var(--palette-neutral-900); /* 12.5:1 sobre surface */
+  --color-text-secondary: var(--palette-neutral-600); /* 5.2:1 sobre surface */
+  --color-text-muted: var(--palette-neutral-500);
+  --color-text-inverse: var(--palette-neutral-50);
+
+  /* Interactivo / brand */
+  --color-interactive: var(--palette-600); /* rojo brand */
+  --color-interactive-hover: var(--palette-700);
+  --color-brand: var(--palette-600);
+  --color-brand-hover: var(--palette-500);
+
+  /* Estados */
+  --color-success: var(--palette-success-500);
+  --color-success-light: var(--palette-success-100);
+  --color-success-hover: var(--palette-success-600);
+
+  --color-warning: var(--palette-warning-500);
+  --color-warning-light: var(--palette-warning-100);
+  --color-warning-hover: var(--palette-warning-600);
+
+  --color-error: var(--palette-error-500);
+  --color-error-light: var(--palette-error-100);
+  --color-error-hover: var(--palette-error-600);
+
+  --color-info: var(--palette-info-500);
+  --color-info-tint: var(--palette-info-100);
+  --color-info-hover: var(--palette-info-600);
+
+  /* Focus / accessibility */
+  --color-focus-ring: oklch(50% 0.21 25 / 0.20);
+  --color-error-focus-ring: oklch(58% 0.21 25 / 0.22);
+
+  /* Skeleton / loading */
+  --color-skeleton-base: var(--palette-neutral-200);
+  --color-skeleton-shimmer: oklch(0% 0 0 / 0.55);
+}
 
 /* ============================================
-   CAPA 2: PRIMITIVAS GLOBALES
+   PRIMITIVOS (no varían: spacing, type, radii, transitions, shadows)
    ============================================ */
 
 :root {
   /* Tipografía */
   --font-family: var(--font-inter);
+  --font-family-display: var(--font-caprasimo, var(--font-family));
   --font-size-xs: 12px;
   --font-size-sm: 13px;
   --font-size-caption: 13.6px;
@@ -40,6 +78,7 @@
   --font-size-xl: 18px;
   --font-size-2xl: 20px;
   --font-size-3xl: 24px;
+  --font-size-display: 32px;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -60,7 +99,7 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Radios — consistentes en todos los temas */
+  /* Radios */
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -72,27 +111,21 @@
   --transition-base: 200ms ease;
   --transition-slow: 300ms ease;
 
-  /* Sombras base (pueden ser overriden por temas que usan sombras teñidas) */
-  --shadow-sm: 0 1px 2px 0 oklch(0% 0 0 / 0.05);
-  --shadow-md: 0 1px 3px 0 oklch(0% 0 0 / 0.1), 0 1px 2px 0 oklch(0% 0 0 / 0.06);
-  --shadow-lg: 0 4px 6px -1px oklch(0% 0 0 / 0.1), 0 2px 4px -1px oklch(0% 0 0 / 0.06);
-  --shadow-xl: 0 10px 15px -3px oklch(0% 0 0 / 0.1), 0 4px 6px -2px oklch(0% 0 0 / 0.05);
+  /* Sombras teñidas con rojo brand */
+  --shadow-sm: 0 1px 2px 0 oklch(50% 0.21 25 / 0.06);
+  --shadow-md:
+    0 1px 3px 0 oklch(50% 0.21 25 / 0.10), 0 1px 2px 0 oklch(50% 0.21 25 / 0.06);
+  --shadow-lg:
+    0 4px 6px -1px oklch(50% 0.21 25 / 0.10), 0 2px 4px -1px oklch(50% 0.21 25 / 0.06);
+  --shadow-xl:
+    0 10px 15px -3px oklch(50% 0.21 25 / 0.10),
+    0 4px 6px -2px oklch(50% 0.21 25 / 0.06);
 
   --opacity-disabled: 0.5;
-
-  /* Navigation */
-  --nav-height: 53px;
-  --banner-height: 60px; /* Top sticky banner inner height: logo 36px + padding 12px top + 12px bottom */
-}
-
-@media (min-width: 768px) {
-  :root {
-    --nav-height: 77px;
-  }
 }
 
 /* ============================================
-   CAPA 3: ESTILOS BASE
+   ESTILOS BASE
    ============================================ */
 
 body {

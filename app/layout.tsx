@@ -1,9 +1,23 @@
 import type { Metadata } from 'next';
+import { Caprasimo, Inter } from 'next/font/google';
 import { Suspense } from 'react';
 import { AuthRejectionToast } from '@/components/AuthRejectionToast/AuthRejectionToast';
 import { ToastProvider } from '@/components/Providers/ToastProvider';
 import './globals.css';
 import './themes/tokens.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const caprasimo = Caprasimo({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-caprasimo',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Kiosco Gustavo',
@@ -16,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" data-theme="default">
+    <html lang="es" className={`${inter.variable} ${caprasimo.variable}`}>
       <body>
         <ToastProvider>
           <Suspense>

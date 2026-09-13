@@ -10,23 +10,51 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-8);
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: var(--space-6) var(--space-4) var(--space-10);
+  padding: var(--space-8) var(--space-4) var(--space-12);
 }
 
 .hero {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-2);
 }
 
-.title {
+.logoWrap {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin-bottom: var(--space-2);
+  filter: drop-shadow(0 6px 12px oklch(50% 0.21 25 / 0.18));
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.brandLine {
   margin: 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-brand);
+}
+
+.claim {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-normal);
   line-height: var(--line-height-tight);
   color: var(--color-text-primary);
 }
@@ -36,6 +64,7 @@
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
+  max-width: 36ch;
 }
 
 .tabsWrap {
@@ -51,12 +80,6 @@
 .filterBadge strong {
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-4);
 }
 
 .empty {
@@ -78,20 +101,26 @@
 
 @media (min-width: 768px) {
   .main {
-    padding: var(--space-8) var(--space-6) var(--space-12);
-    gap: var(--space-8);
+    padding: var(--space-10) var(--space-6) var(--space-12);
+    gap: var(--space-10);
   }
 
-  .title {
-    font-size: var(--font-size-3xl);
+  .hero {
+    padding: var(--space-8) var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .logoWrap {
+    width: 320px;
+    height: 320px;
+  }
+
+  .claim {
+    font-size: var(--font-size-display);
   }
 
   .subtitle {
     font-size: var(--font-size-lg);
-  }
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: var(--space-6);
+    max-width: 52ch;
   }
 }

@@ -1,6 +1,6 @@
-import { Header } from '@/components/Layouts/Header/Header';
+import Image from 'next/image';
 import { CategoryTabs } from '@/components/Features/Client/CategoryTabs/CategoryTabs';
-import { ProductCard } from '@/components/Features/Client/ProductCard/ProductCard';
+import { ProductGrid } from '@/components/Features/Client/ProductGrid/ProductGrid';
 import { env } from '@/lib/env';
 import { categoryUseCases } from '@/lib/server/useCases';
 import styles from './HomePage.module.css';
@@ -55,12 +55,23 @@ export async function HomePage({ roots, products, selectedCategoryId }: Props) {
 
   return (
     <div className={styles.shell}>
-      <Header />
       <main className={styles.main}>
         <section className={styles.hero}>
-          <h1 className={styles.title}>{env.NEXT_PUBLIC_APP_NAME}</h1>
+          <div className={styles.logoWrap}>
+            <Image
+              src="/logo.png"
+              alt={`${env.NEXT_PUBLIC_APP_NAME} - Diarios, revistas y figuras`}
+              width={400}
+              height={400}
+              priority
+              sizes="(min-width: 768px) 320px, 240px"
+              className={styles.logo}
+            />
+          </div>
+          <p className={styles.brandLine}>{env.NEXT_PUBLIC_APP_NAME}</p>
+          <h1 className={styles.claim}>Siempre lo que te gusta</h1>
           <p className={styles.subtitle}>
-            Figuras, partes y stock del momento. Hacé tu pedido por WhatsApp.
+            Diarios, revistas y figuras. Hacé tu pedido por WhatsApp y te lo tenemos listo.
           </p>
         </section>
 
@@ -81,11 +92,7 @@ export async function HomePage({ roots, products, selectedCategoryId }: Props) {
             <p className={styles.emptyText}>{emptyMessage}</p>
           </div>
         ) : (
-          <section className={styles.grid} aria-label="Productos">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </section>
+          <ProductGrid products={filteredProducts} />
         )}
       </main>
     </div>

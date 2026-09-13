@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import { env } from '@/lib/env';
 import { buildWhatsAppLink } from '@/lib/shared/utils/whatsapp';
@@ -13,6 +15,7 @@ type Props = {
     image: string | null;
     category: { id: string; name: string };
   };
+  onImageClick: (src: string, alt: string) => void;
 };
 
 const formatPrice = (price: number): string =>
@@ -22,23 +25,36 @@ const formatPrice = (price: number): string =>
     maximumFractionDigits: 0,
   }).format(price);
 
-export function ProductCard({ product }: Props) {
+export function ProductCard({ product, onImageClick }: Props) {
   const showLastUnit = product.stock === 1;
   const showRemaining = product.stock > 1 && product.stock <= 5;
+
+  const handleImageClick = () => {
+    if (product.image) {
+      onImageClick(product.image, product.name);
+    }
+  };
 
   return (
     <article className={styles.card}>
       <div className={styles.media}>
         {product.image ? (
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={400}
-            height={400}
-            sizes="(min-width: 768px) 25vw, 50vw"
-            loading="lazy"
-            className={styles.image}
-          />
+          <button
+            type="button"
+            onClick={handleImageClick}
+            className={styles.imageButton}
+            aria-label={`Ampliar imagen de ${product.name}`}
+          >
+            <Image
+              src={product.image}
+              alt={product.name}
+              width={400}
+              height={400}
+              sizes="(min-width: 768px) 25vw, 50vw"
+              loading="lazy"
+              className={styles.image}
+            />
+          </button>
         ) : (
           <div className={styles.imagePlaceholder} aria-hidden="true">
             🛍️
