@@ -1,36 +1,42 @@
-import type { Prisma, PrismaClient } from '@/lib/generated/prisma/client';
-import type { ImageValue } from '@/lib/shared/types/image';
-import { resolveImageUpload } from '@/lib/shared/utils/uploadImage';
-import { productRepository } from '@/lib/server/db/repository/product.repository';
+import type { Prisma, PrismaClient } from "@/lib/generated/prisma/client";
+import type { ImageValue } from "@/lib/shared/types/image";
+import { resolveImageUpload } from "@/lib/shared/utils/uploadImage";
+import { productRepository } from "@/lib/server/db/repository/product.repository";
 import type {
   CreateProductInput,
   UpdateProductInput,
-} from '@/lib/server/db/repository/product.repository';
+} from "@/lib/server/db/repository/product.repository";
 import {
   cleanupUploadThingFileIfNeeded,
   compensateOrphanedUpload,
   deleteUploadThingFile,
-} from '@/lib/server/uploadthing/cleanup';
+} from "@/lib/server/uploadthing/cleanup";
 
-const computeStockZeroAt = (stock: number): Date | null => (stock === 0 ? new Date() : null);
+const ZERO_STOCK_CUTOFF_DAYS = 30;
+const ZERO_STOCK_CUTOFF_MS = ZERO_STOCK_CUTOFF_DAYS * 24 * 60 * 60 * 1000;
+
+const computeStockZeroAt = (stock: number): Date | null =>
+  stock === 0 ? new Date() : null;
 
 const normalizeImageInput = (
   image: ImageValue | undefined,
 ): { image: string; imageFileKey: string | null } | null => {
   if (image === undefined) return null;
-  if (image === '') return { image: '', imageFileKey: null };
-  if ('file' in image) return null;
+  if (image === "") return { image: "", imageFileKey: null };
+  if ("file" in image) return null;
   return { image: image.url, imageFileKey: image.fileKey };
 };
 
 export const productUseCases = {
-  async getAllWithCategory(filters: { categoryId?: string; isActive?: boolean } = {}) {
-    const { default: db } = await import('@/lib/server/db/db');
+  async getAllWithCategory(
+    filters: { categoryId?: string; isActive?: boolean } = {},
+  ) {
+    const { default: db } = await import("@/lib/server/db/db");
     return productRepository(db).getAll(filters);
   },
 
   async getById({ id }: { id: string }) {
-    const { default: db } = await import('@/lib/server/db/db');
+    const { default: db } = await import("@/lib/server/db/db");
     return productRepository(db).getById({ id });
   },
 
@@ -57,7 +63,7 @@ export const productUseCases = {
       select: { id: true },
     });
     if (!category) {
-      throw new Error('La categoría no existe');
+      throw new Error("La categoría no existe");
     }
 
     let resolved: { image: string; imageFileKey: string | null } | null = null;
@@ -66,7 +72,7 @@ export const productUseCases = {
     if (data.image !== undefined) {
       const result = await resolveImageUpload(data.image, onImageError);
       if (result === null) {
-        throw new Error('No se pudo subir la imagen');
+        throw new Error("No se pudo subir la imagen");
       }
       resolved = normalizeImageInput(result.image) ?? null;
       uploadedFileKey = result.uploadedFileKey;
@@ -80,7 +86,9 @@ export const productUseCases = {
       categoryId: data.categoryId,
       isActive: data.isActive,
       stockZeroAt: computeStockZeroAt(data.stock),
-      ...(resolved ? { image: resolved.image, imageFileKey: resolved.imageFileKey } : {}),
+      ...(resolved
+        ? { image: resolved.image, imageFileKey: resolved.imageFileKey }
+        : {}),
     };
 
     return compensateOrphanedUpload({
@@ -114,7 +122,7 @@ export const productUseCases = {
       select: { id: true, stock: true, imageFileKey: true },
     });
     if (!existing) {
-      throw new Error('El producto no existe');
+      throw new Error("El producto no existe");
     }
 
     let resolved: { image: string; imageFileKey: string | null } | null = null;
@@ -123,7 +131,7 @@ export const productUseCases = {
     if (data.image !== undefined) {
       const result = await resolveImageUpload(data.image, onImageError);
       if (result === null) {
-        throw new Error('No se pudo subir la imagen');
+        throw new Error("No se pudo subir la imagen");
       }
       resolved = normalizeImageInput(result.image) ?? null;
       uploadedFileKey = result.uploadedFileKey;
@@ -138,12 +146,13 @@ export const productUseCases = {
         if (uploadedFileKey) {
           await deleteUploadThingFile(uploadedFileKey);
         }
-        throw new Error('La categoría no existe');
+        throw new Error("La categoría no existe");
       }
     }
 
     const nextStock = data.stock ?? existing.stock;
-    const stockZeroAt = data.stock !== undefined ? computeStockZeroAt(nextStock) : undefined;
+    const stockZeroAt =
+      data.stock !== undefined ? computeStockZeroAt(nextStock) : undefined;
 
     const updatePayload: UpdateProductInput = {
       ...(data.name !== undefined && { name: data.name }),
@@ -153,7 +162,9 @@ export const productUseCases = {
       ...(stockZeroAt !== undefined && { stockZeroAt }),
       ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
-      ...(resolved ? { image: resolved.image, imageFileKey: resolved.imageFileKey } : {}),
+      ...(resolved
+        ? { image: resolved.image, imageFileKey: resolved.imageFileKey }
+        : {}),
     };
 
     const updated = await compensateOrphanedUpload({
@@ -162,19 +173,25 @@ export const productUseCases = {
     });
 
     if (resolved) {
-      await cleanupUploadThingFileIfNeeded(existing.imageFileKey, resolved.imageFileKey);
+      await cleanupUploadThingFileIfNeeded(
+        existing.imageFileKey,
+        resolved.imageFileKey,
+      );
     }
 
     return updated;
   },
 
-  async deleteProduct(db: PrismaClient | Prisma.TransactionClient, { id }: { id: string }) {
+  async deleteProduct(
+    db: PrismaClient | Prisma.TransactionClient,
+    { id }: { id: string },
+  ) {
     const existing = await db.product.findFirst({
       where: { id },
       select: { id: true, imageFileKey: true },
     });
     if (!existing) {
-      throw new Error('El producto no existe');
+      throw new Error("El producto no existe");
     }
 
     const deleted = await productRepository(db).delete({ id });
@@ -191,7 +208,7 @@ export const productUseCases = {
     { id, delta = 1 }: { id: string; delta?: number },
   ) {
     if (delta <= 0) {
-      throw new Error('El delta debe ser positivo');
+      throw new Error("El delta debe ser positivo");
     }
 
     const existing = await db.product.findFirst({
@@ -199,7 +216,7 @@ export const productUseCases = {
       select: { id: true, stock: true },
     });
     if (!existing) {
-      throw new Error('El producto no existe');
+      throw new Error("El producto no existe");
     }
 
     const newStock = existing.stock + delta;
@@ -213,7 +230,7 @@ export const productUseCases = {
     { id, delta = 1 }: { id: string; delta?: number },
   ) {
     if (delta <= 0) {
-      throw new Error('El delta debe ser positivo');
+      throw new Error("El delta debe ser positivo");
     }
 
     const existing = await db.product.findFirst({
@@ -221,12 +238,12 @@ export const productUseCases = {
       select: { id: true, stock: true },
     });
     if (!existing) {
-      throw new Error('El producto no existe');
+      throw new Error("El producto no existe");
     }
 
     const newStock = existing.stock - delta;
     if (newStock < 0) {
-      throw new Error('Stock no puede ser negativo');
+      throw new Error("Stock no puede ser negativo");
     }
 
     const stockZeroAt = newStock === 0 ? new Date() : null;
@@ -234,37 +251,65 @@ export const productUseCases = {
     return productRepository(db).setStock({ id, stock: newStock, stockZeroAt });
   },
 
-  async toggleProductActive(db: PrismaClient | Prisma.TransactionClient, { id }: { id: string }) {
+  async toggleProductActive(
+    db: PrismaClient | Prisma.TransactionClient,
+    { id }: { id: string },
+  ) {
     const existing = await db.product.findFirst({
       where: { id },
       select: { id: true, isActive: true },
     });
     if (!existing) {
-      throw new Error('El producto no existe');
+      throw new Error("El producto no existe");
     }
-    return productRepository(db).setActive({ id, isActive: !existing.isActive });
+    return productRepository(db).setActive({
+      id,
+      isActive: !existing.isActive,
+    });
   },
 
-  async cleanupOldZeroStockProducts(db: PrismaClient | Prisma.TransactionClient) {
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const { productRepository } = await import('@/lib/server/db/repository/product.repository');
+  async previewCleanupZeroStockProducts(
+    db: PrismaClient | Prisma.TransactionClient,
+  ) {
+    const cutoff = new Date(Date.now() - ZERO_STOCK_CUTOFF_MS);
+    const candidates = await productRepository(db).findExpiredZeroStock({
+      before: cutoff,
+    });
 
-    const candidates = await productRepository(db).findExpiredZeroStock({ before: cutoff });
+    return {
+      items: candidates.map((product) => ({
+        id: product.id,
+        name: product.name,
+        stockZeroAt: product.stockZeroAt,
+      })),
+    };
+  },
 
-    const ids: string[] = [];
-    for (const product of candidates) {
+  async executeCleanupZeroStockProducts(
+    db: PrismaClient | Prisma.TransactionClient,
+    { ids }: { ids: string[] },
+  ) {
+    const products = await db.product.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, imageFileKey: true },
+    });
+
+    const deleted: string[] = [];
+    for (const product of products) {
       try {
         if (product.imageFileKey) {
-          const { deleteUploadThingFile } = await import('@/lib/server/uploadthing/cleanup');
           await deleteUploadThingFile(product.imageFileKey);
         }
         await db.product.delete({ where: { id: product.id } });
-        ids.push(product.id);
+        deleted.push(product.id);
       } catch (error) {
-        console.error(`[cleanupStock] Error deleting product ${product.id}:`, error);
+        console.error(
+          `[cleanupStock] Error deleting product ${product.id}:`,
+          error,
+        );
       }
     }
 
-    return { deletedCount: ids.length, ids };
+    return { deletedCount: deleted.length, ids: deleted };
   },
 };

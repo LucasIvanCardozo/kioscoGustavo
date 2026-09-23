@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from '@/lib/generated/prisma/client';
+import type { Prisma, PrismaClient } from "@/lib/generated/prisma/client";
 
 export type CreateProductInput = {
   name: string;
@@ -25,22 +25,27 @@ const PRODUCT_INCLUDE = {
   },
 } satisfies Prisma.ProductInclude;
 
-export const productRepository = (db: PrismaClient | Prisma.TransactionClient) => ({
-  getAll({ categoryId, isActive }: { categoryId?: string; isActive?: boolean } = {}) {
+export const productRepository = (
+  db: PrismaClient | Prisma.TransactionClient,
+) => ({
+  getAll({
+    categoryId,
+    isActive,
+  }: { categoryId?: string; isActive?: boolean } = {}) {
     return db.product.findMany({
       where: {
         ...(categoryId ? { categoryId } : {}),
         ...(isActive !== undefined ? { isActive } : {}),
       },
       include: PRODUCT_INCLUDE,
-      orderBy: [{ createdAt: 'desc' }],
+      orderBy: [{ createdAt: "desc" }],
     });
   },
 
   getAllWithCategory() {
     return db.product.findMany({
       include: PRODUCT_INCLUDE,
-      orderBy: [{ createdAt: 'desc' }],
+      orderBy: [{ createdAt: "desc" }],
     });
   },
 
@@ -71,12 +76,15 @@ export const productRepository = (db: PrismaClient | Prisma.TransactionClient) =
     const updateData: Prisma.ProductUpdateInput = {};
 
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.description !== undefined) updateData.description = data.description;
+    if (data.description !== undefined)
+      updateData.description = data.description;
     if (data.price !== undefined) updateData.price = data.price;
     if (data.stock !== undefined) updateData.stock = data.stock;
-    if (data.stockZeroAt !== undefined) updateData.stockZeroAt = data.stockZeroAt;
+    if (data.stockZeroAt !== undefined)
+      updateData.stockZeroAt = data.stockZeroAt;
     if (data.image !== undefined) updateData.image = data.image;
-    if (data.imageFileKey !== undefined) updateData.imageFileKey = data.imageFileKey;
+    if (data.imageFileKey !== undefined)
+      updateData.imageFileKey = data.imageFileKey;
     if (data.categoryId !== undefined) {
       updateData.category = { connect: { id: data.categoryId } };
     }
@@ -124,6 +132,7 @@ export const productRepository = (db: PrismaClient | Prisma.TransactionClient) =
         id: true,
         name: true,
         imageFileKey: true,
+        stockZeroAt: true,
       },
     });
   },
