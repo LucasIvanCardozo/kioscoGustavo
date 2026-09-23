@@ -1,15 +1,16 @@
-import { cacheTag } from 'next/cache';
-import { categoryUseCases } from '@/lib/server/useCases';
-import { productUseCases } from '@/lib/server/useCases';
-import { ProductsTable } from './_components/ProductsTable';
-import styles from './page.module.css';
+import { cacheTag } from "next/cache";
+import { categoryUseCases } from "@/lib/server/useCases";
+import { productUseCases } from "@/lib/server/useCases";
+import { CleanupZeroStockButton } from "./_components/CleanupZeroStockButton";
+import { ProductsTable } from "./_components/ProductsTable";
+import styles from "./page.module.css";
 
 export const instant = false;
 
 export default async function ProductosPage() {
-  'use cache';
-  cacheTag('kiosco:products');
-  cacheTag('kiosco:categories');
+  "use cache";
+  cacheTag("kiosco:products");
+  cacheTag("kiosco:categories");
 
   const [products, categories] = await Promise.all([
     productUseCases.getAllWithCategory(),
@@ -27,10 +28,11 @@ export default async function ProductosPage() {
         <div>
           <h1 className={styles.title}>Productos</h1>
           <p className={styles.subtitle}>
-            Gestioná el catálogo: nombre, descripción, precio, stock, imagen y categoría. El stock
-            en cero se oculta al cliente de inmediato.
+            Gestioná el catálogo: nombre, descripción, precio, stock, imagen y
+            categoría. El stock en cero se oculta al cliente de inmediato.
           </p>
         </div>
+        <CleanupZeroStockButton />
       </header>
 
       <ProductsTable products={products} categories={categoryOptions} />
