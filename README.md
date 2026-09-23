@@ -7,7 +7,7 @@ Catálogo público + panel admin para el kiosco de Gustavo.
 ```bash
 pnpm install
 cp .env.example .env
-# Completar en .env: AUTH_SECRET y CRON_SECRET (openssl rand -base64 32)
+# Completar en .env: AUTH_SECRET (openssl rand -base64 32)
 # Ajustar DATABASE_URL al Postgres local (default asume postgres/postgres en :5432).
 # Crear la DB local: createdb kiosco_gustavo
 pnpm db:migrate
@@ -18,18 +18,18 @@ App disponible en [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-| Script              | Qué hace                                  |
-| ------------------- | ----------------------------------------- |
-| `pnpm dev`          | Levanta Next.js en modo desarrollo        |
-| `pnpm build`        | Compila para producción                   |
-| `pnpm start`        | Sirve el build de producción              |
-| `pnpm typecheck`    | `tsc --noEmit`                            |
-| `pnpm lint`         | Biome lint                                |
-| `pnpm format`       | Biome format --write                      |
-| `pnpm test`         | Vitest (configurar en Fase 2/3)           |
-| `pnpm test:e2e`     | Playwright (configurar en Fase 4)         |
-| `pnpm db:migrate`   | Prisma migrate dev                        |
-| `pnpm db:studio`    | Prisma Studio                             |
+| Script            | Qué hace                           |
+| ----------------- | ---------------------------------- |
+| `pnpm dev`        | Levanta Next.js en modo desarrollo |
+| `pnpm build`      | Compila para producción            |
+| `pnpm start`      | Sirve el build de producción       |
+| `pnpm typecheck`  | `tsc --noEmit`                     |
+| `pnpm lint`       | Biome lint                         |
+| `pnpm format`     | Biome format --write               |
+| `pnpm test`       | Vitest (configurar en Fase 2/3)    |
+| `pnpm test:e2e`   | Playwright (configurar en Fase 4)  |
+| `pnpm db:migrate` | Prisma migrate dev                 |
+| `pnpm db:studio`  | Prisma Studio                      |
 
 ## Fase 0 completada
 
@@ -49,7 +49,7 @@ App disponible en [http://localhost:3000](http://localhost:3000).
 2. **Fase 2 — Categorías CRUD.** Jerarquía de 2 niveles, sin `venueId`.
 3. **Fase 3 — Productos CRUD + imagen + stock.** UploadThing, lazy upload, `isActive` separado de stock.
 4. **Fase 4 — Vista cliente.** Home con grid, filtro por categoría, `ProductCard` con botón WhatsApp.
-5. **Fase 5 — Cron job.** `vercel.json` + endpoint `/api/cron/cleanup-stock`.
+5. **Fase 5 — Botón de limpieza manual en admin.** Botón "Limpiar sin stock (+30 días)" en `/admin/productos` con preview + confirm. Borra productos con `stockZeroAt` mayor a 30 días y sus imágenes en UploadThing.
 6. **Fase 6 — Deploy.** Neon + Vercel + dominio.
 
 ## Documentación

@@ -1,4 +1,4 @@
-# AGENTS.md — kioscoGustavo
+# AGENTS.md — kioscogustavo
 
 Entry point for agent sessions. Detailed architecture, decisions, and original plan live in [docs/PLANIFICACION.md](docs/PLANIFICACION.md). **Keep this file under ~150 lines**; extract detail to `docs/` if it grows.
 
@@ -46,8 +46,6 @@ pnpm format               # biome format --write
 pnpm db:migrate           # prisma migrate dev against .env
 pnpm db:deploy            # prisma migrate deploy against .env
 pnpm db:studio            # prisma studio
-pnpm cron:trigger         # local cron smoke test (replace BEARER with CRON_SECRET)
-curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/cleanup-stock
 ```
 
 ## Architecture
@@ -56,7 +54,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/clea
 app/                      → routes (cacheComponents opt-out via 'use cache' + instant=false)
   page.tsx                → public catalog (loadCatalog() helper + Page with searchParams)
   login/, admin/          → auth + admin shell (inherits instant=false)
-  api/cron/cleanup-stock/ → cron endpoint (Bearer CRON_SECRET)
+
 components/
   Features/Client/        → public home (Header, CategoryTabs, ProductCard, HomePage)
   Layouts/                → Header (public) + form/ + Modals/ from carta-qr
@@ -76,7 +74,7 @@ lib/
 proxy.ts                  → Edge middleware (NextAuth auth gate via auth.config.ts)
 prisma/                   → schema.prisma + migrations
 prisma.config.ts          → datasource url for migrate CLI
-vercel.json               → cron schedule
+
 next.config.ts            → cacheComponents + agentRules + images.remotePatterns (UT)
 ```
 
@@ -147,7 +145,7 @@ Wraps `createAction` + `auth()`. ActionContext = `{ data, session, db }`. **No**
 
 - `ADMIN_EMAILS` (CSV) is the single source of truth for the whitelist. Parsed by `lib/env.ts` into `string[]`. Lowercased.
 - Auth redirects via the function form, never string concat. `proxy.ts` enforces the whitelist for `/admin/*`.
-- UploadThing routes live behind `auth()`. Cron endpoint validates `Authorization: Bearer ${CRON_SECRET}` (500 if `CRON_SECRET` not set, 401 if missing/wrong, 200 with `{ deletedCount, ids, durationMs }` on success).
+- UploadThing routes live behind `auth()`. Manual cleanup of zero-stock products runs from the admin UI (`CleanupZeroStockButton` in `app/admin/productos`) and is protected by the same admin session check.
 - Never log secrets, tokens, or credentials.
 - Public env vars (`NEXT_PUBLIC_*`) are the only ones exposed to the client bundle.
 
@@ -176,7 +174,6 @@ Subject line max 100 chars, imperative or infinitive mood. Body in present tense
 - `AUTH_SECRET` / `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — required for NextAuth.
 - `DATABASE_URL` — Neon connection string.
 - `UPLOADTHING_TOKEN` — only required for image uploads.
-- `CRON_SECRET` — required for the Vercel cron (Bearer token).
 
 ## References
 

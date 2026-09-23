@@ -117,7 +117,7 @@ model Product {
   categoryId    String
   category      Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   isActive      Boolean   @default(true)
-  stockZeroAt   DateTime? // timestamp en que stock llegó a 0. Lo usa el cron.
+  stockZeroAt   DateTime? // timestamp en que stock llegó a 0. Lo usa el botón de limpieza manual en admin.
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -131,7 +131,7 @@ model Product {
 
 - `price` es `Int` en pesos ARS enteros (carta-qr ya lo hace así; evita problemas de redondeo).
 - `stock: Int` arranca en 0. Decisión confirmada: **columna simple en Product**.
-- `stockZeroAt` se setea la primera vez que `stock` pasa a 0. Lo usa el cron para borrar productos que llevan **más de 30 días en 0**. Si Gustavo edita el stock y vuelve a 0 otra vez, se resetea el timestamp (no se resetea si pasa de 0 a >0; se resetea solo si pasa de >0 a 0).
+- `stockZeroAt` se setea la primera vez que `stock` pasa a 0. Lo usa el botón de limpieza manual en `app/admin/productos` para borrar productos que llevan **más de 30 días en 0**. Si Gustavo edita el stock y vuelve a 0 otra vez, se resetea el timestamp (no se resetea si pasa de 0 a >0; se resetea solo si pasa de >0 a 0).
 - `isActive` existe **además** de `stock`, para que Gustavo pueda pausar manualmente un producto sin tener que setear stock=0 (ej: "se va de vacaciones, no quiero que aparezca").
 - `categoryId` con `onDelete: Restrict` (no se puede borrar una categoría con productos asociados). El cliente ve error claro si intenta.
 - `image` + `imageFileKey` siguen el patrón lazy upload de carta-qr (`ImageForm`, `resolveImageUpload`, `cleanupUploadThingFileIfNeeded`, `deleteUploadThingFile`).
@@ -145,12 +145,12 @@ model Product {
 
 ### 4.3 Visibilidad de productos
 
-| Estado                                      | Admin lo ve           | Cliente lo ve | Botón WhatsApp |
-| ------------------------------------------- | --------------------- | ------------- | -------------- |
-| `isActive = true`, `stock > 0`              | ✅                    | ✅            | ✅             |
-| `isActive = true`, `stock = 0`, `< 30 días` | ✅                    | ❌ (oculto)   | ❌             |
-| `isActive = true`, `stock = 0`, `> 30 días` | ❌ (borrado por cron) | ❌            | ❌             |
-| `isActive = false` (pausado por Gustavo)    | ✅ (badge "Pausado")  | ❌            | ❌             |
+| Estado                                      | Admin lo ve              | Cliente lo ve | Botón WhatsApp |
+| ------------------------------------------- | ------------------------ | ------------- | -------------- |
+| `isActive = true`, `stock > 0`              | ✅                       | ✅            | ✅             |
+| `isActive = true`, `stock = 0`, `< 30 días` | ✅                       | ❌ (oculto)   | ❌             |
+| `isActive = true`, `stock = 0`, `> 30 días` | ❌ (borrado desde admin) | ❌            | ❌             |
+| `isActive = false` (pausado por Gustavo)    | ✅ (badge "Pausado")     | ❌            | ❌             |
 
 En el form de edición, el admin tiene dos switches separados:
 
@@ -204,10 +204,8 @@ kioscoGustavo/
 │   │   │   └── page.tsx                 # Tabla + CRUD + filtros
 │   │   └── _components/                 # Componentes privados del admin
 │   └── api/
-│       ├── auth/
-│       │   └── [...nextauth]/route.ts
-│       └── cron/
-│           └── cleanup-stock/route.ts   # Endpoint del cron (protegido con CRON_SECRET)
+│       └── auth/
+│           └── [...nextauth]/route.ts
 ├── components/
 │   ├── Features/
 │   │   ├── Admin/
@@ -281,7 +279,7 @@ kioscoGustavo/
 ├── public/
 ├── prisma/
 │   └── schema.prisma                    # Fuente de verdad del schema
-├── vercel.json                          # Configuración del cron job
+├── vercel.json
 ├── next.config.ts
 ├── biome.json                           # Copiado de carta-qr
 ├── tsconfig.json
@@ -538,49 +536,22 @@ export function buildWhatsAppLink(phone: string, productName: string): string {
 
 ### 8.4 Cron job de limpieza
 
-**Trigger**: Vercel Cron, configurado en `vercel.json`:
+**Trigger**: Manual, desde el botón **"Limpiar sin stock (+30 días)"** en `app/admin/productos`.
 
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/cleanup-stock",
-      "schedule": "0 6 * * *"
-    }
-  ]
-}
-```
+**Flujo**:
 
-> Cron en UTC. 03:00 ART (UTC-3) = 06:00 UTC. Ajustar si cambia el offset.
+- Al abrir el modal: el server action `previewCleanupZeroStock` busca productos con `stock = 0 AND stockZeroAt < (now - 30 days)` y devuelve la lista (id + nombre + fecha).
+- El admin ve la lista y confirma.
+- El server action `executeCleanupZeroStock` recibe los `ids` exactos del preview (no recalcula candidatos, evita race condition).
+- Por cada producto: borra fila + imagen UploadThing. Loguea cuántos se borraron.
+- Invalida `kiosco:products` con `updateTag`.
 
-**Endpoint**: `app/api/cron/cleanup-stock/route.ts`
+**Use cases** en `lib/server/useCases/product.usecases.ts`:
 
-- Verifica header `Authorization: Bearer ${CRON_SECRET}` (Vercel lo manda automáticamente).
-- Si no coincide, 401.
-- Si coincide: busca productos con `stock = 0 AND stockZeroAt < (now - 30 days)`.
-- Para cada uno: borra fila + imagen UploadThing.
-- Loguea cuántos se borraron.
-- Retorna 200 con `{ deletedCount, ids }`.
+- `previewCleanupZeroStockProducts(db)` — solo lectura.
+- `executeCleanupZeroStockProducts(db, { ids })` — borra por ids explícitos.
 
-**Use case** (no es un action, es un script que vive en `lib/server/useCases/product.usecases.ts` o archivo aparte `lib/server/cron/cleanupStock.ts`):
-
-```ts
-export async function cleanupOldZeroStockProducts() {
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const candidates = await productRepository(db).findExpiredZeroStock({
-    before: cutoff,
-  });
-  let deletedCount = 0;
-  for (const product of candidates) {
-    await productRepository(db).delete({ id: product.id });
-    if (product.imageFileKey) await deleteUploadThingFile(product.imageFileKey);
-    deletedCount++;
-  }
-  // Invalidar cache para que la home se refresque
-  updateTag("kiosco:products");
-  return { deletedCount, ids: candidates.map((p) => p.id) };
-}
-```
+**Por qué manual y no automático**: el usuario prefiere confirmar cada ejecución. La limpieza masiva es destructiva y no se necesita a frecuencia fija.
 
 ---
 
@@ -645,13 +616,14 @@ Plan tentativo. Cada fase termina con un entregable verificable (no necesariamen
 
 **Entregable:** Cliente entra a la home, ve productos, filtra por categoría, toca "Lo quiero!" y abre WhatsApp con mensaje pre-armado.
 
-### Fase 5 — Cron job
+### Fase 5 — Botón de limpieza manual en admin
 
-- [ ] `vercel.json` con cron.
-- [ ] Endpoint `/api/cron/cleanup-stock` con verificación de `CRON_SECRET`.
-- [ ] Use case `cleanupOldZeroStockProducts`.
-- [ ] Repository `findExpiredZeroStock`.
-- [ ] Test manual del endpoint con `curl`.
+- [x] `CleanupZeroStockButton` en `app/admin/productos/_components/` con modal de preview + confirm.
+- [x] Server action `previewCleanupZeroStock` (read-only).
+- [x] Server action `executeCleanupZeroStock` (muta por `ids` explícitos + `updateTag`).
+- [x] Use case `previewCleanupZeroStockProducts` + `executeCleanupZeroStockProducts` (split del anterior `cleanupOldZeroStockProducts`).
+- [x] Repository `findExpiredZeroStock` extendido con `stockZeroAt` para el preview.
+- [x] Cron y `CRON_SECRET` eliminados (decisión del usuario: prefiere control manual).
 
 **Entregable:** Productos con stock=0 hace >30 días se borran automáticamente, incluyendo imagen.
 
@@ -664,12 +636,12 @@ Plan tentativo. Cada fase termina con un entregable verificable (no necesariamen
 - [x] Primer deploy, smoke test en `*.vercel.app`.
 - [ ] Comprar dominio `.com.ar` (cuando se decida).
 - [ ] Configurar DNS.
-- [x] Configurar cron en producción (deployado con `vercel.json`).
+- [x] Botón de limpieza manual en admin (reemplaza el cron planificado originalmente).
 - [x] Smoke test final con Gustavo.
 
 **Entregable:** App en producción accesible públicamente.
 
-**Estado actual:** Deploy vivo en `https://kiosco-gustavo-three.vercel.app/`. Sesión de implementación cerrada el 2026-09-12 con smoke test E2E exitoso (home, login, admin CRUD, upload imagen, WhatsApp CTA, rechazo por whitelist, cron auth).
+**Estado actual:** Deploy vivo en `https://kiosco-gustavo-three.vercel.app/`. Sesión de implementación cerrada el 2026-09-12 con smoke test E2E exitoso (home, login, admin CRUD, upload imagen, WhatsApp CTA, rechazo por whitelist).
 
 ---
 
@@ -695,8 +667,6 @@ DATABASE_URL=                                   # dev: postgres local. Prod: con
 # Solo UPLOADTHING_TOKEN (v7). Requerido solo cuando se sube la primera imagen.
 UPLOADTHING_TOKEN=
 
-# === Cron ===
-CRON_SECRET=                                    # openssl rand -base64 32
 ```
 
 ---
@@ -742,15 +712,15 @@ No es bloqueante para MVP, pero documentar la estrategia antes de Fase 6.
 
 ## 14. Riesgos identificados
 
-| Riesgo                                          | Mitigación                                                                                                 |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Gustavo olvida re-stockear antes de los 30 días | Notificación opcional (email/whatsapp) desde el cron cuando quedan 5 días para borrar. Diferido a Fase 5+. |
-| Subida de imágenes pesadas                      | Validar tamaño (4MB) client + server side vía `MAX_UPLOAD_SIZE`. Patrón carta-qr.                          |
-| Whitelist rota                                  | `ADMIN_EMAILS` se loguea en arranque para confirmar formato. Documentado en `lib/env.ts`.                  |
-| Migración de DB en producción                   | Prisma migrations, nunca `db push` en prod. Branching de DB en Neon para PRs.                              |
-| Cache stale en home                             | `updateTag('kiosco:products')` en cada action. Si aún hay stale, `router.refresh()` en el cliente.         |
-| OAuth sin verificar en Google                   | Documentar pasos en Fase 6. Verificar antes de Fase 1 con email real.                                      |
-| Cron se cae                                     | Vercel Cron tiene retry automático. Log de los runs. Si falla 3 veces, alert. Diferido.                    |
+| Riesgo                                          | Mitigación                                                                                                                                                                  |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gustavo olvida re-stockear antes de los 30 días | Botón manual en admin muestra la lista con la fecha de cada producto, así Gustavo ve qué está por vencer antes de limpiar. Notificación opcional (email/whatsapp) diferida. |
+| Subida de imágenes pesadas                      | Validar tamaño (4MB) client + server side vía `MAX_UPLOAD_SIZE`. Patrón carta-qr.                                                                                           |
+| Whitelist rota                                  | `ADMIN_EMAILS` se loguea en arranque para confirmar formato. Documentado en `lib/env.ts`.                                                                                   |
+| Migración de DB en producción                   | Prisma migrations, nunca `db push` en prod. Branching de DB en Neon para PRs.                                                                                               |
+| Cache stale en home                             | `updateTag('kiosco:products')` en cada action. Si aún hay stale, `router.refresh()` en el cliente.                                                                          |
+| OAuth sin verificar en Google                   | Documentar pasos en Fase 6. Verificar antes de Fase 1 con email real.                                                                                                       |
+| Cron se cae                                     | Vercel Cron tiene retry automático. Log de los runs. Si falla 3 veces, alert. Diferido.                                                                                     |
 
 ---
 
