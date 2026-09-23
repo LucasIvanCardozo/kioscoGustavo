@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const adminEmailsSchema = z
   .string()
-  .min(1, 'ADMIN_EMAILS no puede estar vacío')
+  .min(1, "ADMIN_EMAILS no puede estar vacío")
   .transform((csv) =>
     csv
-      .split(',')
+      .split(",")
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean),
   );
@@ -24,8 +24,6 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   UPLOADTHING_TOKEN: z.string().optional(),
-
-  CRON_SECRET: z.string().optional(),
 });
 
 type EnvShape = z.infer<typeof envSchema>;
@@ -34,24 +32,25 @@ const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   const issues = JSON.stringify(parsed.error.flatten().fieldErrors, null, 2);
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     throw new Error(`Invalid environment variables:\n${issues}`);
   }
-  console.warn(`[env] Variables incompletas o inválidas (modo dev). Ver .env.example.\n${issues}`);
+  console.warn(
+    `[env] Variables incompletas o inválidas (modo dev). Ver .env.example.\n${issues}`,
+  );
 }
 
 const fallback = {
-  NEXT_PUBLIC_APP_URL: '',
-  NEXT_PUBLIC_APP_NAME: '',
-  NEXT_PUBLIC_WHATSAPP_NUMBER: '',
-  AUTH_SECRET: '',
+  NEXT_PUBLIC_APP_URL: "",
+  NEXT_PUBLIC_APP_NAME: "",
+  NEXT_PUBLIC_WHATSAPP_NUMBER: "",
+  AUTH_SECRET: "",
   AUTH_URL: undefined,
   GOOGLE_CLIENT_ID: undefined,
   GOOGLE_CLIENT_SECRET: undefined,
   ADMIN_EMAILS: [],
-  DATABASE_URL: '',
+  DATABASE_URL: "",
   UPLOADTHING_TOKEN: undefined,
-  CRON_SECRET: undefined,
 } satisfies EnvShape;
 
 export const env: EnvShape = parsed.success ? parsed.data : fallback;
