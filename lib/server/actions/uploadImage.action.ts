@@ -2,7 +2,10 @@
 
 import { auth } from '@/lib/server/auth/auth';
 import { utapi } from '@/lib/server/uploadthing/utapi';
-import { MAX_UPLOAD_SIZE } from '@/lib/shared/constants/upload';
+import {
+  validateCompressedImageSize,
+  validateImageType,
+} from '@/lib/shared/utils/uploadValidation';
 
 export type UploadFileResult =
   | { success: true; url: string; fileKey: string }
@@ -14,11 +17,14 @@ export async function uploadImageAction(file: File): Promise<UploadFileResult> {
     return { success: false, error: 'No autorizado' };
   }
 
-  if (file.size > MAX_UPLOAD_SIZE) {
-    return {
-      success: false,
-      error: `La imagen no puede pesar más de ${Math.round(MAX_UPLOAD_SIZE / 1024 / 1024)} MB`,
-    };
+  const typeError = validateImageType(file);
+  if (typeError) {
+    return { success: false, error: typeError };
+  }
+
+  const sizeError = validateCompressedImageSize(file);
+  if (sizeError) {
+    return { success: false, error: sizeError };
   }
 
   try {

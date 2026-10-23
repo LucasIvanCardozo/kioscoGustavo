@@ -5,16 +5,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/UI/Button';
-import { compressImageForUpload } from '@/lib/shared/image-compressor';
-import { MAX_UPLOAD_SIZE } from '@/lib/shared/constants/upload';
+import { prepareImageForUpload } from '@/lib/shared/image-compressor';
+import { ALLOWED_IMAGE_TYPES, MAX_SOURCE_FILE_SIZE } from '@/lib/shared/constants/upload';
+import { formatBytes } from '@/lib/shared/utils/uploadValidation';
 import type { ImageValue } from '@/lib/shared/types/image';
 import styles from './image-form.module.css';
-
-const formatBytes = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
-};
 
 interface Props {
   value: ImageValue | undefined;
@@ -52,17 +47,17 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > MAX_UPLOAD_SIZE) {
-      setLocalError(`La imagen no puede pesar más de ${formatBytes(MAX_UPLOAD_SIZE)}.`);
-      onChange('');
-      event.target.value = '';
-      return;
-    }
+
     setLocalError(null);
     setIsCompressing(true);
     try {
-      const compressed = await compressImageForUpload(file);
-      onChange({ file: compressed });
+      const result = await prepareImageForUpload(file);
+      if (!result.ok) {
+        setLocalError(result.error);
+        onChange('');
+        return;
+      }
+      onChange({ file: result.file });
     } catch {
       setLocalError('No se pudo procesar la imagen. Probá con otra.');
       onChange('');
@@ -120,7 +115,7 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept={ALLOWED_IMAGE_TYPES.join(',')}
               onChange={handleFileSelect}
               className={styles.fileInput}
               aria-label="Subir imagen"
@@ -128,7 +123,10 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
             <Button type="button" variant="secondary" onClick={handleChangeImage}>
               Subir imagen
             </Button>
-            <p className={styles.hint}>JPG/PNG/WEBP, máximo {formatBytes(MAX_UPLOAD_SIZE)}.</p>
+            <p className={styles.hint}>
+              JPG/PNG/WEBP, hasta {formatBytes(MAX_SOURCE_FILE_SIZE)}. Se comprime automáticamente
+              antes de subir.
+            </p>
             {localError && <p className={styles.localError}>{localError}</p>}
           </div>
         )}
@@ -138,7 +136,7 @@ export const ImageForm = ({ value, onChange, label, error }: Props) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={ALLOWED_IMAGE_TYPES.join(',')}
             onChange={handleFileSelect}
             className={styles.fileInput}
             aria-label="Cambiar imagen"

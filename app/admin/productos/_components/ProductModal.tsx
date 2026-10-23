@@ -179,7 +179,7 @@ export const ProductModal = ({ open, onClose, mode, categories, product }: Props
             error={imageError ?? undefined}
           />
           <p className={styles.helper}>
-            La imagen se sube al guardar. Máximo 4 MB. JPG, PNG o WEBP.
+            La imagen se comprime y se sube al guardar. JPG, PNG o WEBP.
           </p>
         </SectionForm>
 

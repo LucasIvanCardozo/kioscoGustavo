@@ -1,6 +1,11 @@
 import imageCompression from 'browser-image-compression';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { compressImageForUpload, DEFAULT_COMPRESS_OPTIONS } from '@/lib/shared/image-compressor';
+import {
+  compressImageForUpload,
+  DEFAULT_COMPRESS_OPTIONS,
+  prepareImageForUpload,
+} from '@/lib/shared/image-compressor';
+import { MAX_SOURCE_FILE_SIZE } from '@/lib/shared/constants/upload';
 
 vi.mock('browser-image-compression', () => ({
   default: vi.fn(),
@@ -131,5 +136,56 @@ describe('compressImageForUpload', () => {
     expect(result).toBeInstanceOf(File);
     expect(result.type).toBe('image/webp');
     expect(result.name).toBe('logo.webp');
+  });
+});
+
+describe('prepareImageForUpload', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('accepts a 6 MB photo that exceeds the old 4 MB limit and returns the compressed file', async () => {
+    mockedCompression.mockResolvedValueOnce(
+      new Blob([new Uint8Array(200 * 1024)], { type: 'image/webp' }) as unknown as File,
+    );
+
+    const source = buildFile('product-photo.jpg', 6 * 1024 * 1024, 'image/jpeg');
+    const result = await prepareImageForUpload(source);
+
+    expect(result.ok).toBe(true);
+    expect(mockedCompression).toHaveBeenCalledOnce();
+    if (!result.ok) throw new Error(result.error);
+    expect(result.file.type).toBe('image/webp');
+    expect(result.file.size).toBe(200 * 1024);
+  });
+
+  it('rejects a file above the source limit without compressing it', async () => {
+    const source = buildFile('huge.jpg', MAX_SOURCE_FILE_SIZE + 1, 'image/jpeg');
+    const result = await prepareImageForUpload(source);
+
+    expect(result).toEqual({
+      ok: false,
+      error: 'Este archivo es demasiado grande para procesarlo (máximo 25 MB)',
+    });
+    expect(mockedCompression).not.toHaveBeenCalled();
+  });
+
+  it('rejects a disallowed mime type without compressing it', async () => {
+    const source = buildFile('payload.pdf', 2 * 1024 * 1024, 'application/pdf');
+    const result = await prepareImageForUpload(source);
+
+    expect(result).toEqual({ ok: false, error: 'Formato de imagen no permitido' });
+    expect(mockedCompression).not.toHaveBeenCalled();
+  });
+
+  it('rejects when the compressed result still exceeds the upload limit', async () => {
+    mockedCompression.mockResolvedValueOnce(
+      new Blob([new Uint8Array(5 * 1024 * 1024)], { type: 'image/webp' }) as unknown as File,
+    );
+
+    const source = buildFile('product-photo.jpg', 6 * 1024 * 1024, 'image/jpeg');
+    const result = await prepareImageForUpload(source);
+
+    expect(result).toEqual({ ok: false, error: 'La imagen no puede pesar más de 4 MB' });
   });
 });

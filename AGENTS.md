@@ -69,8 +69,8 @@ lib/
   server/uploadthing/     → utapi proxy + cleanup + compensateOrphanedUpload
   shared/schemas/         → Zod (category, product)
   shared/types/           → Prisma-derived types (CategoryWithCount, ProductWithRelations)
-  shared/utils/           → whatsapp.ts (buildWhatsAppLink), uploadImage.ts
-  shared/constants/upload.ts → MAX_UPLOAD_SIZE
+  shared/utils/           → whatsapp.ts (buildWhatsAppLink), uploadImage.ts, uploadValidation.ts
+  shared/constants/upload.ts → MAX_SOURCE_FILE_SIZE, MAX_UPLOAD_SIZE, ALLOWED_IMAGE_TYPES
 proxy.ts                  → Edge middleware (NextAuth auth gate via auth.config.ts)
 prisma/                   → schema.prisma + migrations
 prisma.config.ts          → datasource url for migrate CLI
@@ -121,6 +121,7 @@ Wraps `createAction` + `auth()`. ActionContext = `{ data, session, db }`. **No**
 ### UploadThing lazy upload (server-side)
 
 - `<ImageForm>` stores `{ file: File }` in form state; **no upload until form submit**.
+- `<ImageForm>` calls `prepareImageForUpload()` (client): mime type → 25 MB on the **original** (`MAX_SOURCE_FILE_SIZE`) → compression (WebP, ≤1MB, 1920px) → 4 MB on the **compressed** file (`MAX_UPLOAD_SIZE`). Validation rules live in `lib/shared/utils/uploadValidation.ts` and are shared with the server action.
 - Server action calls `resolveImageUpload()` which invokes `uploadImageAction()` → `utapi.uploadFiles()` with `customId: kiosco/products/<uuid8>`.
 - `compensateOrphanedUpload({ uploadedFileKey, save })` rolls back the upload if the DB write fails.
 - `cleanupUploadThingFileIfNeeded(oldKey, newKey)` deletes the previous file on update.

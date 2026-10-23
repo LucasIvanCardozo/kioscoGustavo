@@ -1,4 +1,9 @@
 import imageCompression from 'browser-image-compression';
+import {
+  validateCompressedImageSize,
+  validateImageType,
+  validateSourceImageSize,
+} from '@/lib/shared/utils/uploadValidation';
 
 export const DEFAULT_COMPRESS_OPTIONS = {
   maxSizeMB: 1,
@@ -34,4 +39,21 @@ export async function compressImageForUpload(file: File): Promise<File> {
   }
 
   return new File([result], name, { type: WEBP_MIME });
+}
+
+export type ImagePreparationResult = { ok: true; file: File } | { ok: false; error: string };
+
+export async function prepareImageForUpload(file: File): Promise<ImagePreparationResult> {
+  const typeError = validateImageType(file);
+  if (typeError) return { ok: false, error: typeError };
+
+  const sourceSizeError = validateSourceImageSize(file);
+  if (sourceSizeError) return { ok: false, error: sourceSizeError };
+
+  const compressed = await compressImageForUpload(file);
+
+  const compressedSizeError = validateCompressedImageSize(compressed);
+  if (compressedSizeError) return { ok: false, error: compressedSizeError };
+
+  return { ok: true, file: compressed };
 }
